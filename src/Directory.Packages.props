@@ -8,6 +8,6 @@
     <PackageVersion Include="NiL.JS" Version="2.6.1700" />
     <PackageVersion Include="Sodium.Core" Version="1.4.0" />
     <PackageVersion Include="Spectre.Console" Version="0.50.0" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta5.25306.1" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
   </ItemGroup>
 </Project>
