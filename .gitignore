@@ -369,3 +369,6 @@ FodyWeavers.xsd
 
 # macOS shit
 .DS_Store
+
+# generated artifacts
+src/artifact-*
