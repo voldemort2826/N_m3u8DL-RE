@@ -658,6 +658,12 @@ namespace N_m3u8DL_RE.CommandLine
                     MaxSpeed = parseResult.GetValue(MaxSpeed),
                 };
 
+                if (string.IsNullOrWhiteSpace(myOption.Input))
+                {
+                    Logger.Error("Error: input (URL or file) is required.");
+                    return;
+                }
+
                 if (parseResult.GetValue(CustomHLSMethod) is not null)
                 {
                     myOption.CustomHLSMethod = parseResult.GetValue(CustomHLSMethod);
@@ -690,24 +696,25 @@ namespace N_m3u8DL_RE.CommandLine
 
                 // 混流设置
                 MuxOptions? muxAfterDoneValue = parseResult.GetValue(MuxAfterDone);
-                if (muxAfterDoneValue == null)
+                if (muxAfterDoneValue != null)
                 {
-                    return;
-                }
-
-                myOption.MuxAfterDone = true;
-                myOption.MuxOptions = muxAfterDoneValue;
-                if (muxAfterDoneValue.UseMkvmerge)
-                {
-                    myOption.MkvmergeBinaryPath = muxAfterDoneValue.BinPath;
+                    myOption.MuxAfterDone = true;
+                    myOption.MuxOptions = muxAfterDoneValue;
+                    if (!muxAfterDoneValue.UseMkvmerge)
+                    {
+                        myOption.MkvmergeBinaryPath = muxAfterDoneValue.BinPath;
+                    }
+                    else
+                    {
+                        myOption.FFmpegBinaryPath ??= muxAfterDoneValue.BinPath;
+                    }
                 }
                 else
                 {
-                    myOption.FFmpegBinaryPath ??= muxAfterDoneValue.BinPath;
+                    myOption.MuxAfterDone = false;
                 }
 
                 await action(myOption);
-                return;
             });
 
             CommandLineConfiguration config = new(rootCommand)
