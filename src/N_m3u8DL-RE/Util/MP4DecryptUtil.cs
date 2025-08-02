@@ -11,6 +11,16 @@ namespace N_m3u8DL_RE.Util
     internal static partial class MP4DecryptUtil
     {
         private static readonly string ZeroKid = "00000000000000000000000000000000";
+
+        /// <summary>
+        /// Generate a random 16-character alphanumeric string (a-z0-9, no spaces)
+        /// Thread-safe and collision-resistant for rapid successive calls
+        /// </summary>
+        private static string GenerateRandomFileName()
+        {
+            return Guid.NewGuid().ToString("N")[..16];
+        }
+
         public static async Task<bool> DecryptAsync(DecryptEngine decryptEngine, string bin, string[]? keys, string source, string dest, string? kid, string init = "", bool isMultiDRM = false)
         {
             if (keys == null || keys.Length == 0)
@@ -21,9 +31,9 @@ namespace N_m3u8DL_RE.Util
             List<string> keyPairs = [.. keys];
             string? keyPair = null;
             string? trackId = null;
-            string? tmpEncFile = null;
-            string? tmpDecFile = null;
-            string? workDir = null;
+            string? tmpSrcFile = null;
+            string? tmpDestFile = null;
+            string? tmpFile = null; // For merged init+source file
 
             if (isMultiDRM)
             {
@@ -64,81 +74,130 @@ namespace N_m3u8DL_RE.Util
                 return false;
             }
 
+            // Generate safe temporary filenames
+            string sourceDir = Path.GetDirectoryName(source) ?? "";
+            string destDir = Path.GetDirectoryName(dest) ?? "";
+            string sourceExt = Path.GetExtension(source);
+            string destExt = Path.GetExtension(dest);
+
+            tmpSrcFile = Path.Combine(sourceDir, GenerateRandomFileName() + sourceExt);
+            tmpDestFile = Path.Combine(destDir, GenerateRandomFileName() + destExt);
+
             string cmd;
 
-            string tmpFile = "";
-            if (decryptEngine == DecryptEngine.SHAKA_PACKAGER)
+            try
             {
-                string enc = source;
-                // shakaPackager 手动构造文件
+                // Step 1: Prepare source file with safe name
                 if (init != "")
                 {
+                    // Merge init+source first
                     tmpFile = Path.ChangeExtension(source, ".itmp");
                     MergeUtil.CombineMultipleFilesIntoSingleFile([init, source], tmpFile);
-                    enc = tmpFile;
+                    File.Copy(tmpFile, tmpSrcFile);
+                }
+                else
+                {
+                    File.Copy(source, tmpSrcFile);
                 }
 
-                cmd = $"--quiet --enable_raw_key_decryption input=\"{enc}\",stream=0,output=\"{dest}\" " +
-                      $"--keys {(trackId != null ? $"label={trackId}:" : "")}key_id={(trackId != null ? ZeroKid : kid)}:key={keyPair.Split(':')[1]}";
+                // Step 2: Build command with safe filenames
+                if (decryptEngine == DecryptEngine.SHAKA_PACKAGER)
+                {
+                    cmd = $"--quiet --enable_raw_key_decryption input=\"{tmpSrcFile}\",stream=0,output=\"{tmpDestFile}\" " +
+                          $"--keys {(trackId != null ? $"label={trackId}:" : "")}key_id={(trackId != null ? ZeroKid : kid)}:key={keyPair.Split(':')[1]}";
+                }
+                else if (decryptEngine == DecryptEngine.MP4DECRYPT)
+                {
+                    cmd = trackId == null
+                        ? string.Join(" ", keyPairs.Select(k => $"--key {k}"))
+                        : string.Join(" ", keyPairs.Select(k => $"--key {trackId}:{k.Split(':')[1]}"));
+
+                    string workDir = Path.GetDirectoryName(tmpSrcFile)!;
+                    if (init != "")
+                    {
+                        string infoFile = Path.GetDirectoryName(init) == workDir ? Path.GetFileName(init) : init;
+                        cmd += $" --fragments-info \"{infoFile}\" ";
+                    }
+                    cmd += $" \"{Path.GetFileName(tmpSrcFile)}\" \"{Path.GetFileName(tmpDestFile)}\"";
+
+                    // Set working directory for mp4decrypt
+                    Process? process = Process.Start(new ProcessStartInfo()
+                    {
+                        FileName = bin,
+                        Arguments = cmd,
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WorkingDirectory = workDir
+                    });
+                    await process!.WaitForExitAsync();
+                    bool isSuccess = process.ExitCode == 0;
+
+                    // Handle the result
+                    if (isSuccess && File.Exists(tmpDestFile))
+                    {
+                        File.Move(tmpDestFile, dest);
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Error(ResString.DecryptionFailed);
+                        return false;
+                    }
+                }
+                else // FFMPEG
+                {
+                    cmd = $"-loglevel error -nostdin -decryption_key {keyPair.Split(':')[1]} -i \"{tmpSrcFile}\" -c copy \"{tmpDestFile}\"";
+                }
+
+                // Run command (for Shaka and FFmpeg)
+                if (decryptEngine != DecryptEngine.MP4DECRYPT)
+                {
+                    bool isSuccess = await RunCommandAsync(bin, cmd);
+
+                    // Handle the result
+                    if (isSuccess && File.Exists(tmpDestFile))
+                    {
+                        File.Move(tmpDestFile, dest);
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Error(ResString.DecryptionFailed);
+                        return false;
+                    }
+                }
             }
-            else if (decryptEngine == DecryptEngine.MP4DECRYPT)
+            catch (Exception ex)
             {
-                cmd = trackId == null
-                    ? string.Join(" ", keyPairs.Select(k => $"--key {k}"))
-                    : string.Join(" ", keyPairs.Select(k => $"--key {trackId}:{k.Split(':')[1]}"));
-                // 解决mp4decrypt中文问题 切换到源文件所在目录并改名再解密
-                workDir = Path.GetDirectoryName(source)!;
-                tmpEncFile = Path.Combine(workDir, $"{Guid.NewGuid()}{Path.GetExtension(source)}");
-                tmpDecFile = Path.Combine(workDir, $"{Path.GetFileNameWithoutExtension(tmpEncFile)}_dec{Path.GetExtension(tmpEncFile)}");
-                File.Move(source, tmpEncFile);
-                if (init != "")
-                {
-                    string infoFile = Path.GetDirectoryName(init) == workDir ? Path.GetFileName(init) : init;
-                    cmd += $" --fragments-info \"{infoFile}\" ";
-                }
-                cmd += $" \"{Path.GetFileName(tmpEncFile)}\" \"{Path.GetFileName(tmpDecFile)}\"";
+                Logger.ErrorMarkUp($"Decryption failed: {ex.Message}");
+                return false;
             }
-            else
+            finally
             {
-                string enc = source;
-                // ffmpeg实时解密 手动构造文件
-                if (init != "")
+                // Cleanup temporary files
+                try
                 {
-                    tmpFile = Path.ChangeExtension(source, ".itmp");
-                    MergeUtil.CombineMultipleFilesIntoSingleFile([init, source], tmpFile);
-                    enc = tmpFile;
+                    if (tmpSrcFile != null && File.Exists(tmpSrcFile))
+                    {
+                        File.Delete(tmpSrcFile);
+                    }
+
+                    if (tmpDestFile != null && File.Exists(tmpDestFile))
+                    {
+                        File.Delete(tmpDestFile);
+                    }
+
+                    if (tmpFile != null && File.Exists(tmpFile))
+                    {
+                        File.Delete(tmpFile);
+                    }
                 }
-
-                cmd = $"-loglevel error -nostdin -decryption_key {keyPair.Split(':')[1]} -i \"{enc}\" -c copy \"{dest}\"";
-            }
-
-            bool isSuccess = await RunCommandAsync(bin, cmd, workDir);
-
-            // mp4decrypt 还原文件改名操作
-            if (workDir is not null)
-            {
-                if (File.Exists(tmpEncFile))
+                catch (Exception ex)
                 {
-                    File.Move(tmpEncFile, source);
-                }
-
-                if (File.Exists(tmpDecFile))
-                {
-                    File.Move(tmpDecFile, dest);
+                    Logger.WarnMarkUp($"Failed to cleanup temp files: {ex.Message}");
                 }
             }
 
-            if (isSuccess)
-            {
-                if (tmpFile != "" && File.Exists(tmpFile))
-                {
-                    File.Delete(tmpFile);
-                }
-
-                return true;
-            }
-
-            Logger.Error(ResString.DecryptionFailed);
             return false;
         }
 
