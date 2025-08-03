@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 
 using N_m3u8DL_RE.Common.Log;
 
@@ -21,7 +22,7 @@ namespace N_m3u8DL_RE.Common.Util
                     result = await funcAsync();
                     break;
                 }
-                catch (Exception ex) when (ex is WebException or IOException or HttpRequestException)
+                catch (Exception ex) when (IsRetriableException(ex))
                 {
                     currentException = ex;
                     retryCount++;
@@ -33,6 +34,12 @@ namespace N_m3u8DL_RE.Common.Util
             return retryCount == maxRetries
                 ? throw new InvalidOperationException($"Failed to execute action after {maxRetries} retries.", currentException)
                 : result;
+        }
+
+        private static bool IsRetriableException(Exception ex)
+        {
+            return ex is WebException or IOException or HttpRequestException or
+                TaskCanceledException or SocketException or TimeoutException;
         }
     }
 }
