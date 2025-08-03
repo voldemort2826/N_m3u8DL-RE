@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text.Encodings.Web;
+﻿using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -25,15 +24,22 @@ namespace N_m3u8DL_RE.Common.Util
         };
         private static readonly JsonContext Context = new(Options);
 
+        public static string ConvertToJson<T>(T obj) where T : class
+        {
+            return obj switch
+            {
+                StreamSpec s => JsonSerializer.Serialize(s, Context.StreamSpec),
+                IOrderedEnumerable<StreamSpec> ss => JsonSerializer.Serialize(ss, Context.IOrderedEnumerableStreamSpec),
+                List<StreamSpec> sList => JsonSerializer.Serialize(sList, Context.ListStreamSpec),
+                IEnumerable<MediaSegment> mList => JsonSerializer.Serialize(mList, Context.IEnumerableMediaSegment),
+                _ => throw new NotSupportedException($"Type {typeof(T).Name} is not supported for JSON serialization")
+            };
+        }
+
+        // backward compatibility
         public static string ConvertToJson(object o)
         {
-            return o is StreamSpec s
-                ? JsonSerializer.Serialize(s, Context.StreamSpec)
-                : o is IOrderedEnumerable<StreamSpec> ss
-                ? JsonSerializer.Serialize(ss, Context.IOrderedEnumerableStreamSpec)
-                : o is List<StreamSpec> sList
-                ? JsonSerializer.Serialize(sList, Context.ListStreamSpec)
-                : o is IEnumerable<MediaSegment> mList ? JsonSerializer.Serialize(mList, Context.IEnumerableMediaSegment) : "{NOT SUPPORTED}";
+            return ConvertToJson((dynamic)o);
         }
 
         public static string FormatFileSize(double fileSize)
@@ -51,9 +57,11 @@ namespace N_m3u8DL_RE.Common.Util
         // 此函数用于格式化输出时长  
         public static string FormatTime(int time)
         {
-            TimeSpan ts = new(0, 0, time);
-            string str = (ts.Hours.ToString("00", CultureInfo.InvariantCulture) == "00" ? "" : ts.Hours.ToString("00", CultureInfo.InvariantCulture) + "h") + ts.Minutes.ToString("00", CultureInfo.InvariantCulture) + "m" + ts.Seconds.ToString("00", CultureInfo.InvariantCulture) + "s";
-            return str;
+            ArgumentOutOfRangeException.ThrowIfNegative(time);
+            TimeSpan ts = TimeSpan.FromSeconds(time);
+            return ts.Hours > 0
+                ? $"{ts.Hours:00}h{ts.Minutes:00}m{ts.Seconds:00}s"
+                : $"{ts.Minutes:00}m{ts.Seconds:00}s";
         }
 
         /// <summary>
@@ -63,10 +71,31 @@ namespace N_m3u8DL_RE.Common.Util
         /// <returns></returns>
         public static string? FindExecutable(string name)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             string fileExt = OperatingSystem.IsWindows() ? ".exe" : "";
-            string?[] searchPath = [Environment.CurrentDirectory, Path.GetDirectoryName(Environment.ProcessPath)];
+            string executableName = name + fileExt;
+
+            List<string?> searchPaths =
+            [
+                // Add current directory
+                Environment.CurrentDirectory,
+            ];
+
+            // Add process directory (with null check)
+            string? processDir = Path.GetDirectoryName(Environment.ProcessPath);
+            if (processDir != null)
+            {
+                searchPaths.Add(processDir);
+            }
+
+            // Add PATH environment variable paths
             string[] envPath = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? [];
-            return searchPath.Concat(envPath).Select(p => Path.Combine(p!, name + fileExt)).FirstOrDefault(File.Exists);
+            searchPaths.AddRange(envPath);
+
+            return searchPaths
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Select(p => Path.Combine(p!, executableName))
+                .FirstOrDefault(File.Exists);
         }
     }
 }
