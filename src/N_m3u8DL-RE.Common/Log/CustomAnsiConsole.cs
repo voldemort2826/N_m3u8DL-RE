@@ -5,79 +5,193 @@ using Spectre.Console;
 
 namespace N_m3u8DL_RE.Common.Log
 {
-    public partial class NonAnsiWriter : TextWriter
+    public sealed partial class NonAnsiWriter(TextWriter? baseWriter = null) : TextWriter
     {
-        public override Encoding Encoding => Console.OutputEncoding;
+        private readonly TextWriter _baseWriter = baseWriter ?? Console.Out;
+        private readonly StringBuilder _buffer = new();
+        private readonly Lock _lock = new();
 
-        private string? _lastOut = "";
+        public override Encoding Encoding => _baseWriter.Encoding;
 
         public override void Write(char value)
         {
-            Console.Write(value);
+            lock (_lock)
+            {
+                _ = _buffer.Append(value);
+                if (value == '\n' || _buffer.Length > 1024) // Flush on newline or buffer full
+                {
+                    FlushBuffer();
+                }
+            }
         }
 
         public override void Write(string? value)
         {
-            if (_lastOut == value)
+            if (string.IsNullOrEmpty(value))
             {
                 return;
             }
-            _lastOut = value;
-            RemoveAnsiEscapeSequences(value);
+
+            lock (_lock)
+            {
+                _ = _buffer.Append(value);
+                if (value.Contains('\n') || _buffer.Length > 1024)
+                {
+                    FlushBuffer();
+                }
+            }
         }
 
-        private static void RemoveAnsiEscapeSequences(string? input)
+        public override void WriteLine(string? value)
         {
-            // Use regular expression to remove ANSI escape sequences
-            string output = MyRegex().Replace(input ?? "", "");
-            output = MyRegex1().Replace(output, "");
-            output = MyRegex2().Replace(output, "");
-            if (string.IsNullOrWhiteSpace(output))
+            Write(value);
+            Write('\n');
+        }
+
+        public override void Flush()
+        {
+            lock (_lock)
+            {
+                FlushBuffer();
+                _baseWriter.Flush();
+            }
+        }
+
+        private void FlushBuffer()
+        {
+            if (_buffer.Length == 0)
             {
                 return;
             }
-            Console.Write(output);
+
+            string content = _buffer.ToString();
+            _ = _buffer.Clear();
+
+            string cleaned = RemoveAnsiEscapeSequences(content);
+            if (!string.IsNullOrEmpty(cleaned))
+            {
+                _baseWriter.Write(cleaned);
+            }
         }
 
-        [GeneratedRegex(@"\x1B\[(\d+;?)+m")]
-        private static partial Regex MyRegex();
-        [GeneratedRegex(@"\[\??\d+[AKlh]")]
-        private static partial Regex MyRegex1();
-        [GeneratedRegex("[\r\n] +")]
-        private static partial Regex MyRegex2();
+        private static string RemoveAnsiEscapeSequences(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return string.Empty;
+            }
+
+            // More comprehensive ANSI escape sequence removal
+            string output = input;
+
+            // Standard ANSI color/style codes
+            output = AnsiColorRegex().Replace(output, "");
+
+            // Cursor positioning and screen control
+            output = AnsiCursorRegex().Replace(output, "");
+
+            // Extended escape sequences (OSC, etc.)
+            output = AnsiExtendedRegex().Replace(output, "");
+
+            // Clean up excessive whitespace but preserve intentional formatting
+            output = ExcessiveWhitespaceRegex().Replace(output, "\n");
+
+            return output;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Flush();
+                _baseWriter?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        // More comprehensive regex patterns
+        [GeneratedRegex(@"\x1B\[[0-9;]*[mGKHFJABCDnsuhl]", RegexOptions.Compiled)]
+        private static partial Regex AnsiColorRegex();
+
+        [GeneratedRegex(@"\x1B\[[?]?[0-9;]*[AKlhHJFCD]", RegexOptions.Compiled)]
+        private static partial Regex AnsiCursorRegex();
+
+        [GeneratedRegex(@"\x1B\][0-9];[^\x07]*\x07", RegexOptions.Compiled)]
+        private static partial Regex AnsiExtendedRegex();
+
+        [GeneratedRegex(@"[\r\n]\s*[\r\n]+", RegexOptions.Compiled)]
+        private static partial Regex ExcessiveWhitespaceRegex();
     }
 
     /// <summary>
-    /// A console capable of writing ANSI escape sequences.
+    /// Enhanced console capable of writing ANSI escape sequences with better configuration.
     /// </summary>
     public static class CustomAnsiConsole
     {
-        public static IAnsiConsole Console { get; set; } = AnsiConsole.Console;
+        private static IAnsiConsole? _console;
+        private static readonly Lock _lock = new();
 
-        public static void InitConsole(bool forceAnsi, bool noAnsiColor)
+        public static IAnsiConsole Console
         {
-            if (forceAnsi)
+            get
             {
-                AnsiConsoleSettings ansiConsoleSettings = new();
-                if (noAnsiColor)
+                if (_console == null)
                 {
-                    ansiConsoleSettings.Out = new AnsiConsoleOutput(new NonAnsiWriter());
+                    lock (_lock)
+                    {
+                        _console ??= CreateDefaultConsole();
+                    }
+                }
+                return _console;
+            }
+            private set => _console = value;
+        }
+
+        public static void InitConsole(bool forceAnsi = false, bool noAnsiColor = false, int? width = null)
+        {
+            lock (_lock)
+            {
+                AnsiConsoleSettings settings = new();
+
+                // Configure ANSI support
+                if (forceAnsi)
+                {
+                    settings.Ansi = AnsiSupport.Yes;
+                    settings.Interactive = InteractionSupport.Yes;
+                }
+                else
+                {
+                    settings.Ansi = AnsiSupport.Detect;
+                    settings.Interactive = InteractionSupport.Detect;
                 }
 
-                ansiConsoleSettings.Interactive = InteractionSupport.Yes;
-                ansiConsoleSettings.Ansi = AnsiSupport.Yes;
-                Console = AnsiConsole.Create(ansiConsoleSettings);
-                Console.Profile.Width = int.MaxValue;
-            }
-            else
-            {
-                AnsiConsoleSettings ansiConsoleSettings = new();
+                // Configure color output
                 if (noAnsiColor)
                 {
-                    ansiConsoleSettings.Out = new AnsiConsoleOutput(new NonAnsiWriter());
+                    settings.Out = new AnsiConsoleOutput(new NonAnsiWriter());
                 }
-                Console = AnsiConsole.Create(ansiConsoleSettings);
+
+                // Set console width
+                Console = AnsiConsole.Create(settings);
+                if (width.HasValue)
+                {
+                    Console.Profile.Width = width.Value;
+                }
+                else if (forceAnsi)
+                {
+                    Console.Profile.Width = int.MaxValue;
+                }
             }
+        }
+
+        private static IAnsiConsole CreateDefaultConsole()
+        {
+            AnsiConsoleSettings settings = new()
+            {
+                Ansi = AnsiSupport.Detect,
+                Interactive = InteractionSupport.Detect
+            };
+            return AnsiConsole.Create(settings);
         }
 
         /// <summary>
@@ -96,6 +210,108 @@ namespace N_m3u8DL_RE.Common.Log
         public static void MarkupLine(string value)
         {
             Console.MarkupLine(value);
+        }
+
+        /// <summary>
+        /// Writes plain text without markup processing.
+        /// </summary>
+        /// <param name="value">The value to write.</param>
+        public static void Write(string value)
+        {
+            Console.Write(value);
+        }
+
+        /// <summary>
+        /// Writes plain text followed by a line terminator.
+        /// </summary>
+        /// <param name="value">The value to write.</param>
+        public static void WriteLine(string value)
+        {
+            Console.WriteLine(value);
+        }
+
+        /// <summary>
+        /// Clears the console if supported.
+        /// </summary>
+        public static void Clear()
+        {
+            Console.Clear();
+        }
+
+        /// <summary>
+        /// Gets whether the console supports ANSI escape sequences.
+        /// </summary>
+        public static bool SupportsAnsi => Console.Profile.Capabilities.Ansi;
+
+        /// <summary>
+        /// Gets whether the console supports colors.
+        /// </summary>
+        public static bool SupportsColors => Console.Profile.Capabilities.ColorSystem != ColorSystem.NoColors;
+
+        /// <summary>
+        /// Resets console to default settings.
+        /// </summary>
+        public static void Reset()
+        {
+            lock (_lock)
+            {
+                Console = CreateDefaultConsole();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configuration options for console initialization.
+    /// </summary>
+    public sealed class ConsoleConfig
+    {
+        public bool ForceAnsi { get; set; }
+        public bool NoAnsiColor { get; set; }
+        public int? Width { get; set; }
+        public bool BufferOutput { get; set; } = true;
+        public TextWriter? CustomOutput { get; set; }
+
+        public static ConsoleConfig Default => new();
+
+        public static ConsoleConfig ForceAnsiWithColors => new()
+        {
+            ForceAnsi = true,
+            NoAnsiColor = false
+        };
+
+        public static ConsoleConfig PlainTextOnly => new()
+        {
+            ForceAnsi = false,
+            NoAnsiColor = true
+        };
+    }
+
+    /// <summary>
+    /// Extension methods for enhanced console operations.
+    /// </summary>
+    public static class ConsoleExtensions
+    {
+        /// <summary>
+        /// Initializes console with a configuration object.
+        /// </summary>
+        public static void InitConsole(this ConsoleConfig config)
+        {
+            CustomAnsiConsole.InitConsole(config.ForceAnsi, config.NoAnsiColor, config.Width);
+        }
+
+        /// <summary>
+        /// Writes colored text only if colors are supported.
+        /// </summary>
+        public static void WriteColored(this IAnsiConsole console, string text, string color)
+        {
+            if (CustomAnsiConsole.SupportsColors)
+            {
+                console.MarkupLine($"[{color}]{text.EscapeMarkup()}[/]");
+            }
+            else
+            {
+                console.WriteLine(text);
+            }
         }
     }
 }
