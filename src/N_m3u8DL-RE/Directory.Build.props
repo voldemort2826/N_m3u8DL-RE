@@ -8,7 +8,7 @@
         <!--<IlcTrimMetadata>true</IlcTrimMetadata>-->
         <!--<IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>-->
         <SatelliteResourceLanguages>zh-CN;zh-TW;en-US</SatelliteResourceLanguages>
-        <PublishReadyToRun>true</PublishReadyToRun>
+        <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != 'linux-bionic-x64' and '$(RuntimeIdentifier)' != 'linux-bionic-arm64'">true</PublishReadyToRun>
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>true</SelfContained>
         <StripSymbols>true</StripSymbols>

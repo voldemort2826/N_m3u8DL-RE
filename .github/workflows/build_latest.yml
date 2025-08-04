@@ -235,32 +235,51 @@ jobs:
                   path: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_linux-arm64.tar.gz
 
     build-android-bionic-x64-arm64:
-        runs-on: windows-latest
+        runs-on: ubuntu-latest
         needs: set-date
 
         steps:
-            - uses: actions/checkout@main
+            - uses: actions/checkout@v4
               with:
                   ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Set up NDK
-              shell: pwsh
               run: |
-                  Invoke-WebRequest -Uri "https://dl.google.com/android/repository/android-ndk-r27c-windows.zip" -OutFile "android-ndk.zip"
-                  Expand-Archive -Path "android-ndk.zip" -DestinationPath "./android-ndk"
-                  Get-ChildItem -Path "./android-ndk"
-                  $ndkRoot = "${{ github.workspace }}\android-ndk\android-ndk-r27c"
-                  echo "NDK_ROOT=$ndkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-                  $ndkBinPath = "$ndkRoot\toolchains\llvm\prebuilt\windows-x86_64\bin"
-                  echo $ndkBinPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+                  wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
+                  unzip android-ndk-r27c-linux.zip
+                  echo "NDK_ROOT=$PWD/android-ndk-r27c" >> $GITHUB_ENV
+                  echo "$PWD/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
             - name: Set up dotnet
-              uses: actions/setup-dotnet@main
+              uses: actions/setup-dotnet@v4
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-x64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-arm64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - name: Publish AOT [x64]
+              run: |
+                  dotnet publish src/N_m3u8DL-RE \
+                    -r linux-bionic-x64 \
+                    -c Release \
+                    -p:DisableUnsupportedError=true \
+                    -p:PublishReadyToRun=false \
+                    -p:PublishAotUsingRuntimePack=true \
+                    -p:SelfContained=true \
+                    -p:Version=${{ needs.set-date.outputs.version }} \
+                    -p:BuildDate=${{ needs.set-date.outputs.builddate }} \
+                    -o artifact
+
+            - name: Publish AOT [arm64]
+              run: |
+                  dotnet publish src/N_m3u8DL-RE \
+                    -r linux-bionic-arm64 \
+                    -c Release \
+                    -p:DisableUnsupportedError=true \
+                    -p:PublishReadyToRun=false \
+                    -p:PublishAotUsingRuntimePack=true \
+                    -p:SelfContained=true \
+                    -p:Version=${{ needs.set-date.outputs.version }} \
+                    -p:BuildDate=${{ needs.set-date.outputs.builddate }} \
+                    -o artifact-arm64
 
             - name: Package [linux-bionic]
               run: |
@@ -270,13 +289,13 @@ jobs:
                   tar -czvf ../N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-arm64.tar.gz N_m3u8DL-RE
 
             - name: Upload Artifact [linux-bionic-x64]
-              uses: actions/upload-artifact@main
+              uses: actions/upload-artifact@v4
               with:
                   name: android-bionic-x64
                   path: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-x64.tar.gz
 
-            - name: Upload Artifact[linux-bionic-arm64]
-              uses: actions/upload-artifact@main
+            - name: Upload Artifact [linux-bionic-arm64]
+              uses: actions/upload-artifact@v4
               with:
                   name: android-bionic-arm64
                   path: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-arm64.tar.gz
