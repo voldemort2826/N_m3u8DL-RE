@@ -394,6 +394,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
+            discussions: write
         if: ${{ github.event.inputs.doRelease == 'true' || github.event_name == 'push' }}
         needs:
             [
@@ -420,4 +421,4 @@ jobs:
                   draft: false
                   allowUpdates: true
                   generateReleaseNotes: true
-                  discussionCategory: "Announcements"
+                  discussionCategory: "announcements"
