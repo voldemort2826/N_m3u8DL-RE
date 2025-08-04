@@ -10,7 +10,15 @@
         -->
         <LangVersion>13.0</LangVersion>
         <Nullable>enable</Nullable>
-        <Version>0.3.0</Version>
+
+        <!-- Default version if not provided via build -->
+        <Version Condition="'$(Version)' == ''">0.0.0</Version>
+        <!-- Default build date if not provided via build -->
+        <BuildDate Condition="'$(BuildDate)' == ''">$([System.DateTime]::UtcNow.AddHours(8).ToString(yyyyMMdd))</BuildDate>
+
+        <!-- Simple flag to indicate if build properties were provided -->
+        <DefineConstants Condition="'$(BuildDate)' != '' and '$(BuildDate)' != '$([System.DateTime]::UtcNow.AddHours(8).ToString(yyyyMMdd))'">$(DefineConstants);HAS_BUILD_DATE</DefineConstants>
+
         <Platforms>AnyCPU;x64</Platforms>
 
         <EnableNETAnalyzers>true</EnableNETAnalyzers>

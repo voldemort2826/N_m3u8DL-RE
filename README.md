@@ -1,32 +1,24 @@
-# N_m3u8DL-RE [EN]
+# N_m3u8DL-RE
+
+A fork of nilaoda's [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE) aim to bring quality of life improvements.
 
 Cross-platform DASH/HLS/MSS download tool. Supports on-demand and live streaming (DASH/HLS).
 
-[![img](https://img.shields.io/github/stars/nilaoda/N_m3u8DL-RE?label=%E7%82%B9%E8%B5%9E)](https://github.com/nilaoda/N_m3u8DL-RE)  [![img](https://img.shields.io/github/last-commit/nilaoda/N_m3u8DL-RE?label=%E6%9C%80%E8%BF%91%E6%8F%90%E4%BA%A4)](https://github.com/nilaoda/N_m3u8DL-RE)  [![img](https://img.shields.io/github/release/nilaoda/N_m3u8DL-RE?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC)](https://github.com/nilaoda/N_m3u8DL-RE/releases)  [![img](https://img.shields.io/github/license/nilaoda/N_m3u8DL-RE?label=%E8%AE%B8%E5%8F%AF%E8%AF%81)](https://github.com/nilaoda/N_m3u8DL-RE)   [![img](https://img.shields.io/github/downloads/nilaoda/N_m3u8DL-RE/total?label=%E4%B8%8B%E8%BD%BD%E9%87%8F)](https://github.com/nilaoda/N_m3u8DL-RE/releases)
+[![img](https://img.shields.io/github/last-commit/voldemort2826/N_m3u8DL-RE?label=Last%20Commit)](https://github.com/voldemort2826/N_m3u8DL-RE)  [![img](https://img.shields.io/github/license/voldemort2826/N_m3u8DL-RE?label=License)](https://github.com/voldemort2826/N_m3u8DL-RE)
 
-If you encounter a bug, please first confirm whether you are using the latest version of the software. (If you are using a release version, it is recommended to go to the [Actions](https://github.com/nilaoda/N_m3u8DL-RE/actions) page to download the latest automatically built version and check if the issue has already been fixed.) If you are using the latest version and the issue still exists, you can check the [Issues](https://github.com/nilaoda/N_m3u8DL-RE/issues) section to see if someone else has encountered a similar problem. If not, feel free to open a new issue.
-
----
-
-The built-in terminal in older versions of Windows may not support this program. As an alternative, try running it in [cmder](https://github.com/cmderdev/cmder).
-
-Arch Linux users can install from AUR: [n-m3u8dl-re-bin](https://aur.archlinux.org/packages/n-m3u8dl-re-bin), [n-m3u8dl-re-git](https://aur.archlinux.org/packages/n-m3u8dl-re-git)
-
-```bash
-# Install N_m3u8DL-RE release version on Arch Linux and its derivatives (not maintained by the author)
-yay -Syu n-m3u8dl-re-bin
-
-# Install N_m3u8DL-RE development version on Arch Linux and its derivatives (not maintained by the author)
-yay -Syu n-m3u8dl-re-git
-```
-
----
+> [!WARNING]
+> If you encounter a bug, please first confirm that:
+>
+> - you have downloaded the latest version
+> - you have checked the [Issues](https://github.com/voldemort2826/N_m3u8DL-RE/issues) section to see if someone else has encountered a similar problem
+>
+> If not, feel free to open a new issue.
 
 ## Command line parameters
 
-```
+```text
 Description:
-  N_m3u8DL-RE (Beta version) 20241203
+  N_m3u8DL-RE (Beta) build xxx
 
 Usage:
   N_m3u8DL-RE <input> [options]
@@ -129,29 +121,29 @@ Options:
 <details>
 <summary>Click to view "More Help" section</summary>
 
-```
+```text
 More Help:
 
   --mux-after-done
 
-所有工作完成时尝试混流分离的音视频. 你能够以:分隔形式指定如下参数:
+When all works are done, try to mux the separated audio and video. You can specify the following parameters:
 
-* format=FORMAT: 指定混流容器 mkv, mp4
-* muxer=MUXER: 指定混流程序 ffmpeg, mkvmerge (默认: ffmpeg)
-* bin_path=PATH: 指定程序路径 (默认: 自动寻找)
-* skip_sub=BOOL: 是否忽略字幕文件 (默认: false)
-* keep=BOOL: 混流完成是否保留文件 true, false (默认: false)
+* format=FORMAT: specify the mux container (mkv, mp4)
+* muxer=MUXER: specify the mux program (ffmpeg, mkvmerge) (default: ffmpeg)
+* bin_path=PATH: specify the program path (default: auto-find)
+* skip_sub=BOOL: whether to ignore subtitle files (default: false)
+* keep=BOOL: whether to keep the file after muxing (true, false) (default: false)
 
-例如:
-# 混流为mp4容器
+Examples:
+# mux to mp4 container
 -M format=mp4
-# 使用mkvmerge, 自动寻找程序
+# use mkvmerge, auto-find program
 -M format=mkv:muxer=mkvmerge
-# 使用mkvmerge, 自定义程序路径
+# use mkvmerge, custom program path
 -M format=mkv:muxer=mkvmerge:bin_path="C\:\Program Files\MKVToolNix\mkvmerge.exe"
 ```
 
-```
+```text
 More Help:
 
   --mux-import
@@ -169,7 +161,7 @@ Examples:
 --mux-import path="D\:\media\atmos.m4a":lang=eng:name="English Description Audio" --mux-import path="D\:\media\eng.vtt":lang=eng:name="English (Description)"
 ```
 
-```
+```text
 More Help:
 
   --select-video
@@ -194,7 +186,7 @@ Examples:
 -sv bwMin=800:bwMax=1000
 ```
 
-```
+```text
 More Help:
 
   --select-audio
@@ -211,7 +203,7 @@ Examples:
 -sa role="main":for=best
 ```
 
-```
+```text
 More Help:
 
   --select-subtitle
@@ -225,7 +217,7 @@ Examples:
 -ss name="English":for=all
 ```
 
-```
+```text
 More Help:
 
   --custom-range
@@ -278,6 +270,7 @@ From v0.1.5, you can try to enable `live-pipe-mux` instead of the above command
 
 From v0.1.8, you can set the environment variable `RE_LIVE_PIPE_OPTIONS` to change some options of ffmpeg when `live-pipe-mux` is enabled: <https://github.com/nilaoda/N_m3u8DL-RE/issues/162#issuecomment-1592462532>
 
-## Donate
+## Credits
 
-<a href="https://www.buymeacoffee.com/nilaoda" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+- [@nilaoda](https://github.com/nilaoda): original author
+- All contributors in [@nilaoda/N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE/graphs/contributors)

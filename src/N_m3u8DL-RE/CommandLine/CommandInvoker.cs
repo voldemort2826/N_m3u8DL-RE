@@ -16,7 +16,12 @@ namespace N_m3u8DL_RE.CommandLine
 {
     internal static partial class CommandInvoker
     {
-        public const string VERSION_INFO = "N_m3u8DL-RE (Beta version) 20250701";
+#if BUILD_DATE
+        public const string VERSION_INFO = $"N_m3u8DL-RE (Beta) build" + BUILD_DATE;
+#else
+        // Fallback for when BUILD_DATE is not defined (local dev builds)
+        public static readonly string VERSION_INFO = $"N_m3u8DL-RE (Beta) build {DateTime.UtcNow.AddHours(8):yyyyMMdd}";
+#endif
 
         [GeneratedRegex("((best|worst)\\d*|all)")]
         private static partial Regex ForStrRegex();
