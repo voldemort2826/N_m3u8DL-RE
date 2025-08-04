@@ -24,6 +24,11 @@
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <AnalysisMode>Recommended</AnalysisMode>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\N_m3u8DL-RE.StreamParser\N_m3u8DL-RE.StreamParser.csproj" />
     </ItemGroup>
