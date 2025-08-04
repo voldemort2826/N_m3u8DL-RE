@@ -36,10 +36,10 @@ namespace N_m3u8DL_RE.DownloadManager
 #pragma warning restore IDE0052 // Remove unread private members
         private bool STOP_FLAG;
         private bool READ_IFO;
-        private readonly ConcurrentDictionary<int, int> RecordingDurDic = new(); // 已录制时长
-        private readonly ConcurrentDictionary<int, double> RecordingSizeDic = new(); // 已录制大小
-        private readonly CancellationTokenSource CancellationTokenSource = new(); // 取消Wait
-        private readonly List<byte> InfoBuffer = new(188 * 5000); // 5000个分包中解析信息，没有就算了
+        private readonly ConcurrentDictionary<int, int> RecordingDurDic = new(); // Recorded duration
+        private readonly ConcurrentDictionary<int, double> RecordingSizeDic = new(); // Recorded size
+        private readonly CancellationTokenSource CancellationTokenSource = new(); // Cancel Wait
+        private readonly List<byte> InfoBuffer = new(188 * 5000); // Parse information in 5000 packets, if not, it's ok
 
         public HTTPLiveRecordManager(DownloaderConfig downloaderConfig, List<StreamSpec> selectedSteams, StreamExtractor streamExtractor)
         {
@@ -62,7 +62,7 @@ namespace N_m3u8DL_RE.DownloadManager
 
             Logger.Debug($"dirName: {dirName}; saveDir: {saveDir}; saveName: {saveName}");
 
-            // 创建文件夹
+            // Create folder
             if (!Directory.Exists(saveDir))
             {
                 _ = Directory.CreateDirectory(saveDir);
@@ -85,9 +85,9 @@ namespace N_m3u8DL_RE.DownloadManager
             byte[] buffer = new byte[16 * 1024];
             int size = 0;
 
-            // 计时器
+            // Timer
             _ = TimeCounterAsync();
-            // 读取INFO
+            // Read INFO
             _ = ReadInfoAsync();
 
             try
@@ -200,7 +200,7 @@ namespace N_m3u8DL_RE.DownloadManager
                 await Task.Delay(1000);
                 RecordingDurDic[0]++;
 
-                // 检测时长限制
+                // Check duration limit
                 if (RecordingDurDic.All(d => d.Value >= DownloaderConfig.MyOptions.LiveRecordLimit?.TotalSeconds))
                 {
                     Logger.WarnMarkUp($"[darkorange3_1]{ResString.LiveLimitReached}[/]");
@@ -218,14 +218,14 @@ namespace N_m3u8DL_RE.DownloadManager
             Progress progress = CustomAnsiConsole.Console.Progress().AutoClear(true);
             progress.AutoRefresh = DownloaderConfig.MyOptions.LogLevel != LogLevel.OFF;
 
-            // 进度条的列定义
+            // Progress bar column definition
             ProgressColumn[] progressColumns =
             [
                 new TaskDescriptionColumn() { Alignment = Justify.Left },
-                new RecordingDurationColumn(RecordingDurDic), // 时长显示
-                new RecordingSizeColumn(RecordingSizeDic), // 大小显示
+                new RecordingDurationColumn(RecordingDurDic), // Duration display
+                new RecordingSizeColumn(RecordingSizeDic), // Size display
                 new RecordingStatusColumn(),
-                new DownloadSpeedColumn(SpeedContainerDic), // 速度计算
+                new DownloadSpeedColumn(SpeedContainerDic), // Speed calculation
                 new SpinnerColumn(),
             ];
             if (DownloaderConfig.MyOptions.NoAnsiColor)
@@ -236,11 +236,11 @@ namespace N_m3u8DL_RE.DownloadManager
 
             await progress.StartAsync(async ctx =>
             {
-                // 创建任务
+                // Create tasks
                 Dictionary<StreamSpec, ProgressTask> dic = SelectedSteams.Select(item =>
                 {
                     ProgressTask task = ctx.AddTask(item.ToShortString(), autoStart: false, maxValue: 0);
-                    SpeedContainerDic[task.Id] = new SpeedContainer(); // 速度计算
+                    SpeedContainerDic[task.Id] = new SpeedContainer(); // Speed calculation
                     RecordingDurDic[task.Id] = 0;
                     RecordingSizeDic[task.Id] = 0;
                     return (item, task);
@@ -252,12 +252,12 @@ namespace N_m3u8DL_RE.DownloadManager
                 {
                     Logger.WarnMarkUp($"[darkorange3_1]{ResString.LiveLimit}{GlobalUtil.FormatTime((int)limit.Value.TotalSeconds)}[/]");
                 }
-                // 录制直播时，用户选了几个流就并发录几个
+                // When recording live, the number of streams selected by the user is recorded concurrently
                 ParallelOptions options = new()
                 {
                     MaxDegreeOfParallelism = SelectedSteams.Count
                 };
-                // 并发下载
+                // Concurrent download
                 await Parallel.ForEachAsync(dic, options, async (kp, _) =>
                 {
                     ProgressTask task = kp.Value;

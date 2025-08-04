@@ -8,7 +8,7 @@ namespace N_m3u8DL_RE.Common.Util
         }
 
         /// <summary>
-        /// 判断是不是HEX字符串
+        /// Determine if it is a HEX string
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>

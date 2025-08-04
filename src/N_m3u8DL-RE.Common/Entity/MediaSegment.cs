@@ -19,7 +19,7 @@ namespace N_m3u8DL_RE.Common.Entity
 
         public string Url { get; set; } = string.Empty;
 
-        public string? NameFromVar { get; set; } // MPD分段文件名
+        public string? NameFromVar { get; set; } // MPD segment file name
 
         public override bool Equals(object? obj)
         {

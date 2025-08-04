@@ -14,7 +14,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// URL大文件切片处理
+        /// Large file slicing processing
         /// </summary>
         /// <param name="segment"></param>
         /// <param name="headers"></param>
@@ -90,7 +90,7 @@ namespace N_m3u8DL_RE.Util
             return totalSizeBytes;
         }
 
-        // 此函数主要是切片下载逻辑
+        // This function mainly handles the slicing download logic
         private static List<Clip> GetAllClips(long fileSize)
         {
             List<Clip> clips = [];
@@ -105,7 +105,7 @@ namespace N_m3u8DL_RE.Util
                     From = counter,
                     To = counter + perSize
                 };
-                // 没到最后
+                // Not at the end
                 if (fileSize - perSize > 0)
                 {
                     fileSize -= perSize;
@@ -113,7 +113,7 @@ namespace N_m3u8DL_RE.Util
                     index++;
                     clips.Add(c);
                 }
-                // 已到最后
+                // Already at the end
                 else
                 {
                     c.To = -1;

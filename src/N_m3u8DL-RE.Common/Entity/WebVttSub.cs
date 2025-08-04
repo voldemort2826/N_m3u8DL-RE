@@ -19,7 +19,7 @@ namespace N_m3u8DL_RE.Common.Entity
         public long MpegtsTimestamp { get; set; }
 
         /// <summary>
-        /// 从字节数组解析WEBVTT
+        /// Parse WEBVTT from byte array
         /// </summary>
         /// <param name="textBytes"></param>
         /// <returns></returns>
@@ -29,7 +29,7 @@ namespace N_m3u8DL_RE.Common.Entity
         }
 
         /// <summary>
-        /// 从字节数组解析WEBVTT
+        /// Parse WEBVTT from byte array
         /// </summary>
         /// <param name="textBytes"></param>
         /// <param name="encoding"></param>
@@ -40,7 +40,7 @@ namespace N_m3u8DL_RE.Common.Entity
         }
 
         /// <summary>
-        /// 从字符串解析WEBVTT
+        /// Parse WEBVTT from string
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
@@ -84,7 +84,7 @@ namespace N_m3u8DL_RE.Common.Entity
                     string payload = string.Join(Environment.NewLine, payloads);
                     if (string.IsNullOrEmpty(payload.Trim()))
                     {
-                        continue; // 没获取到payload 跳过添加
+                        continue; // Skip if no payload is obtained
                     }
 
                     List<string> arr = [.. SplitRegex().Split(timeLine.Replace("-->", "")).Where(s => !string.IsNullOrEmpty(s))];
@@ -139,7 +139,7 @@ namespace N_m3u8DL_RE.Common.Entity
         }
 
         /// <summary>
-        /// 从另一个字幕中获取所有Cue，并加载此字幕中，且自动修正偏移
+        /// Get all Cues from another subtitle and load them into this subtitle, and automatically correct the offset
         /// </summary>
         /// <param name="webSub"></param>
         /// <returns></returns>
@@ -153,7 +153,7 @@ namespace N_m3u8DL_RE.Common.Entity
                     continue;
                 }
 
-                // 如果相差只有1ms，且payload相同，则拼接
+                // If the difference is only 1ms and the payload is the same, concatenate
                 SubCue? last = Cues.LastOrDefault();
                 if (last != null && Cues.Count > 0 && (item.StartTime - last.EndTime).TotalMilliseconds <= 1 && item.Payload == last.Payload)
                 {
@@ -174,13 +174,13 @@ namespace N_m3u8DL_RE.Common.Entity
                 return;
             }
 
-            // 确实存在时间轴错误的情况，才修复
+            // Only fix if there is a time axis error
             if ((Cues.Count > 0 && sub.Cues.Count > 0 && sub.Cues.First().StartTime < Cues.Last().EndTime && sub.Cues.First().EndTime != Cues.Last().EndTime) || Cues.Count == 0)
             {
                 // The MPEG2 transport stream clocks (PCR, PTS, DTS) all have units of 1/90000 second
                 long seconds = (sub.MpegtsTimestamp - baseTimestamp) / 90000;
                 TimeSpan offset = TimeSpan.FromSeconds(seconds);
-                // 当前预添加的字幕的起始时间小于实际上已经走过的时间(如offset已经是100秒，而字幕起始却是2秒)，才修复
+                // Only fix if the start time of the subtitle to be added is less than the actual time that has passed (e.g., offset is already 100 seconds, but the subtitle starts at 2 seconds)
                 if (sub.Cues.Count > 0 && sub.Cues.First().StartTime < offset)
                 {
                     foreach (SubCue subCue in sub.Cues)
@@ -225,7 +225,7 @@ namespace N_m3u8DL_RE.Common.Entity
         public override string ToString()
         {
             StringBuilder sb = new();
-            foreach (SubCue c in GetCues())  // 输出时去除空串
+            foreach (SubCue c in GetCues())  // Remove empty strings when outputting
             {
                 _ = sb.AppendLine(c.StartTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture) + " --> " + c.EndTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture) + " " + c.Settings);
                 _ = sb.AppendLine(c.Payload);
@@ -236,7 +236,7 @@ namespace N_m3u8DL_RE.Common.Entity
         }
 
         /// <summary>
-        /// 字幕向前平移指定时间
+        /// Subtitle forward shift specified time
         /// </summary>
         /// <param name="time"></param>
         public void LeftShiftTime(TimeSpan time)
@@ -285,7 +285,7 @@ namespace N_m3u8DL_RE.Common.Entity
 
             if (string.IsNullOrEmpty(srt.Trim()))
             {
-                srt = "1\r\n00:00:00,000 --> 00:00:01,000"; // 空字幕
+                srt = "1\r\n00:00:00,000 --> 00:00:01,000"; // Empty subtitle
             }
 
             return srt;

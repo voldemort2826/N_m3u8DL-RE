@@ -7,19 +7,19 @@ namespace N_m3u8DL_RE.Config
         public required MyOption MyOptions { get; set; }
 
         /// <summary>
-        /// 前置阶段生成的文件夹名
+        /// The folder name generated in the previous step
         /// </summary>
         public required string DirPrefix { get; set; }
         /// <summary>
-        /// 文件名模板
+        /// File name template
         /// </summary>
         public string? SavePattern { get; set; }
         /// <summary>
-        /// 校验响应头的文件大小和实际大小
+        /// Check the file size of the response header and the actual size
         /// </summary>
         public bool CheckContentLength { get; set; } = true;
         /// <summary>
-        /// 请求头
+        /// Request header
         /// </summary>
         public Dictionary<string, string> Headers { get; set; } = [];
     }

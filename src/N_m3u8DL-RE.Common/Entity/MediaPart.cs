@@ -1,6 +1,8 @@
 ﻿namespace N_m3u8DL_RE.Common.Entity
 {
-    // 主要处理 EXT-X-DISCONTINUITY
+    /// <summary>
+    /// Process EXT-X-DISCONTINUITY
+    /// </summary>
     public class MediaPart
     {
         public List<MediaSegment> MediaSegments { get; set; } = [];

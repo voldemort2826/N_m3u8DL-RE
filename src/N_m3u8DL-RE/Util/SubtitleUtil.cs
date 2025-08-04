@@ -7,10 +7,10 @@ namespace N_m3u8DL_RE.Util
     internal static class SubtitleUtil
     {
         /// <summary>
-        /// 写出图形字幕PNG文件
+        /// Write image subtitle PNG files
         /// </summary>
         /// <param name="finalVtt"></param>
-        /// <param name="tmpDir">临时目录</param>
+        /// <param name="tmpDir">Temporary directory</param>
         /// <returns></returns>
         public static async Task TryWriteImagePngsAsync(WebVttSub? finalVtt, string tmpDir)
         {

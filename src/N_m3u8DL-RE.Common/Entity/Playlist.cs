@@ -2,13 +2,13 @@
 {
     public class Playlist
     {
-        // 对应Url信息
+        // Corresponding Url information
         public string Url { get; set; } = string.Empty;
-        // 是否直播
+        // Whether it is live
         public bool IsLive { get; set; }
-        // 直播刷新间隔毫秒（默认15秒）
+        // Live refresh interval in milliseconds (default 15 seconds)
         public double RefreshIntervalMs { get; set; } = 15000;
-        // 所有分片时长总和
+        // Total duration of all segments
         public double TotalDuration => MediaParts.Sum(x =>
         {
             static double selector(MediaSegment m)
@@ -19,11 +19,11 @@
             return x.MediaSegments.Sum(selector);
         });
 
-        // 所有分片中最长时长
+        // Longest duration of all segments
         public double? TargetDuration { get; set; }
-        // INIT信息
+        // INIT information
         public MediaSegment? MediaInit { get; set; }
-        // 分片信息
+        // Segment information
         public List<MediaPart> MediaParts { get; set; } = [];
     }
 }

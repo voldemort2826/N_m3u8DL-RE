@@ -21,7 +21,7 @@ using N_m3u8DL_RE.Util;
 
 using Spectre.Console;
 
-// 处理NT6.0及以下System.CommandLine报错CultureNotFound问题
+// Handle the issue of System.CommandLine reporting CultureNotFound error in NT6.0 and below
 if (OperatingSystem.IsWindows())
 {
     Version osVersion = Environment.OSVersion.Version;
@@ -45,7 +45,7 @@ else if (currLoc.StartsWith("zh-", StringComparison.OrdinalIgnoreCase))
     loc = "zh-TW";
 }
 
-// 处理用户-h等请求
+// Process user-h and other requests
 int index = -1;
 List<string> list = [.. args];
 if ((index = list.IndexOf("--ui-language")) != -1 && list.Count > index + 1 && new List<string> { "en-US", "zh-CN", "zh-TW" }.Contains(list[index + 1]))
@@ -105,7 +105,7 @@ async Task DoWorkAsync(MyOption option)
     }
     CustomAnsiConsole.InitConsole(option.ForceAnsiConsole, option.NoAnsiColor);
 
-    // 检测更新
+    // Check for updates
     if (!option.DisableUpdateCheck)
     {
         _ = CheckUpdateAsync();
@@ -128,7 +128,7 @@ async Task DoWorkAsync(MyOption option)
         HTTPUtil.HttpClientHandler.UseProxy = true;
     }
 
-    // 检查互斥的选项
+    // Check for mutually exclusive options
     if (option is { MuxAfterDone: false, MuxImports.Count: > 0 })
     {
         throw new ArgumentException("MuxAfterDone disabled, MuxImports not allowed!");
@@ -139,14 +139,14 @@ async Task DoWorkAsync(MyOption option)
         option.DecryptionEngine = DecryptEngine.SHAKA_PACKAGER;
     }
 
-    // LivePipeMux开启时 LiveRealTimeMerge必须开启
+    // LiveRealTimeMerge must be enabled when LivePipeMux is enabled
     if (option is { LivePipeMux: true, LiveRealTimeMerge: false })
     {
         Logger.WarnMarkUp("LivePipeMux detected, forced enable LiveRealTimeMerge");
         option.LiveRealTimeMerge = true;
     }
 
-    // 预先检查ffmpeg
+    // Check for ffmpeg
     option.FFmpegBinaryPath ??= GlobalUtil.FindExecutable("ffmpeg");
 
     if (string.IsNullOrEmpty(option.FFmpegBinaryPath) || !File.Exists(option.FFmpegBinaryPath))
@@ -156,7 +156,7 @@ async Task DoWorkAsync(MyOption option)
 
     Logger.Extra($"ffmpeg => {option.FFmpegBinaryPath}");
 
-    // 预先检查mkvmerge
+    // Check for mkvmerge
     if (option is { MuxOptions.UseMkvmerge: true, MuxAfterDone: true })
     {
         option.MkvmergeBinaryPath ??= GlobalUtil.FindExecutable("mkvmerge");
@@ -167,7 +167,7 @@ async Task DoWorkAsync(MyOption option)
         Logger.Extra($"mkvmerge => {option.MkvmergeBinaryPath}");
     }
 
-    // 预先检查
+    // Check for decryption binary
     if (option.Keys is { Length: > 0 } || option.KeyTextFile != null)
     {
         if (!string.IsNullOrEmpty(option.DecryptionBinaryPath) && !File.Exists(option.DecryptionBinaryPath))
@@ -205,12 +205,12 @@ async Task DoWorkAsync(MyOption option)
         }
     }
 
-    // 默认的headers
+    // Set default headers
     Dictionary<string, string> headers = new()
     {
         ["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
     };
-    // 添加或替换用户输入的headers
+    // Add or replace user-defined headers
     foreach (KeyValuePair<string, string> item in option.Headers)
     {
         headers[item.Key] = item.Value;
@@ -240,7 +240,7 @@ async Task DoWorkAsync(MyOption option)
     // for www.nowehoryzonty.pl
     parserConfig.UrlProcessors.Insert(0, new NowehoryzontyUrlProcessor());
 
-    // 等待任务开始时间
+    // Wait for task start time
     if (option.TaskStartAt != null && option.TaskStartAt > DateTime.Now)
     {
         Logger.InfoMarkUp(ResString.TaskStartAt + option.TaskStartAt);
@@ -252,38 +252,38 @@ async Task DoWorkAsync(MyOption option)
 
     string url = option.Input;
 
-    // 流提取器配置
+    // Stream extractor configuration
     StreamExtractor extractor = new(parserConfig);
-    // 从链接加载内容
+    // Load content from link
     await RetryUtil.WebRequestRetryAsync(async () =>
     {
         await extractor.LoadSourceFromUrlAsync(url);
         return true;
     });
-    // 解析流信息
+    // Parse stream information
     List<StreamSpec> streams = await extractor.ExtractStreamsAsync();
 
 
-    // 全部媒体
+    // All media
     List<StreamSpec> lists = [.. streams.OrderBy(p => p.MediaType).ThenByDescending(p => p.Bandwidth).ThenByDescending(GetOrder)];
-    // 基本流
+    // Basic streams
     List<StreamSpec> basicStreams = [.. lists.Where(x => x.MediaType is null or MediaType.VIDEO)];
-    // 可选音频轨道
+    // Optional audio tracks
     List<StreamSpec> audios = [.. lists.Where(x => x.MediaType == MediaType.AUDIO)];
-    // 可选字幕轨道
+    // Optional subtitle tracks
     List<StreamSpec> subs = [.. lists.Where(x => x.MediaType == MediaType.SUBTITLES)];
 
-    // 尝试从URL或文件读取文件名
+    // Try to get file name from URL or file
     if (string.IsNullOrEmpty(option.SaveName))
     {
         option.SaveName = OtherUtil.GetFileNameFromInput(option.Input);
     }
 
-    // 生成文件夹
+    // Generate folder
     string tmpDir = Path.Combine(option.TmpDir ?? Environment.CurrentDirectory, $"{option.SaveName ?? DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture)}");
-    // 记录文件
+    // Record file
     extractor.RawFiles["meta.json"] = GlobalUtil.ConvertToJson(lists);
-    // 写出文件
+    // Write file
     await WriteRawFilesAsync(option, extractor, tmpDir);
 
     Logger.Info(ResString.StreamsInfo, lists.Count, basicStreams.Count, audios.Count, subs.Count);
@@ -359,7 +359,7 @@ async Task DoWorkAsync(MyOption option)
     }
     else
     {
-        // 展示交互式选择框
+        // Show interactive selection box
         selectedStreams = FilterUtil.SelectStreams(lists);
     }
 
@@ -368,37 +368,37 @@ async Task DoWorkAsync(MyOption option)
         throw new InvalidOperationException(ResString.NoStreamsToDownload);
     }
 
-    // HLS: 选中流中若有没加载出playlist的，加载playlist
-    // DASH/MSS: 加载playlist (调用url预处理器)
+    // HLS: If the selected stream has no playlist loaded, load the playlist
+    // DASH/MSS: Load playlist (call url processor)
     if (selectedStreams.Any(s => s.Playlist == null) || extractor.ExtractorType == ExtractorType.MPEGDASH || extractor.ExtractorType == ExtractorType.MSS)
     {
         await extractor.FetchPlayListAsync(selectedStreams);
     }
 
-    // 直播检测
+    // Live detection
     bool livingFlag = selectedStreams.Any(s => s.Playlist?.IsLive == true) && !option.LivePerformAsVod;
     if (livingFlag)
     {
         Logger.WarnMarkUp($"[white on darkorange3_1]{ResString.LiveFound}[/]");
     }
 
-    // 无法识别的加密方式，自动开启二进制合并
+    // If the encryption method is not recognized, automatically enable binary merge
     if (selectedStreams.Any(s => s.Playlist!.MediaParts.Any(p => p.MediaSegments.Any(m => m.EncryptInfo.Method == EncryptMethod.UNKNOWN))))
     {
         Logger.WarnMarkUp($"[darkorange3_1]{ResString.AutoBinaryMerge3}[/]");
         option.BinaryMerge = true;
     }
 
-    // 应用用户自定义的分片范围
+    // Apply user-defined segment range
     if (!livingFlag)
     {
         FilterUtil.ApplyCustomRange(selectedStreams, option.CustomRange);
     }
 
-    // 应用用户自定义的广告分片关键字
+    // Apply user-defined ad segment keywords
     FilterUtil.CleanAd(selectedStreams, option.AdKeywords);
 
-    // 记录文件
+    // Record file
     extractor.RawFiles["meta_selected.json"] = GlobalUtil.ConvertToJson(selectedStreams);
 
     Logger.Info(ResString.SelectedStream);
@@ -407,7 +407,7 @@ async Task DoWorkAsync(MyOption option)
         Logger.InfoMarkUp(item.ToString());
     }
 
-    // 写出文件
+    // Write file
     await WriteRawFilesAsync(option, extractor, tmpDir);
 
     if (option.SkipDownload)
@@ -422,19 +422,19 @@ async Task DoWorkAsync(MyOption option)
 
     Logger.InfoMarkUp(ResString.SaveName + $"[deepskyblue1]{option.SaveName.EscapeMarkup()}[/]");
 
-    // 开始MuxAfterDone后自动使用二进制版
+    // Automatically use binary version after MuxAfterDone
     if (option is { BinaryMerge: false, MuxAfterDone: true })
     {
         option.BinaryMerge = true;
         Logger.WarnMarkUp($"[darkorange3_1]{ResString.AutoBinaryMerge6}[/]");
     }
 
-    // 下载配置
+    // Download configuration
     DownloaderConfig downloadConfig = new()
     {
         MyOptions = option,
         DirPrefix = tmpDir,
-        Headers = parserConfig.Headers, // 使用命令行解析得到的Headers
+        Headers = parserConfig.Headers, // Use headers parsed from command line
     };
 
     bool result = false;
@@ -446,7 +446,7 @@ async Task DoWorkAsync(MyOption option)
     }
     else if (!livingFlag)
     {
-        // 开始下载
+        // Start download
         SimpleDownloadManager sdm = new(downloadConfig, selectedStreams, extractor);
         result = await sdm.StartDownloadAsync();
     }
@@ -469,7 +469,7 @@ async Task DoWorkAsync(MyOption option)
 
 async Task WriteRawFilesAsync(MyOption option, StreamExtractor extractor, string tmpDir)
 {
-    // 写出json文件
+    // Write json file
     if (option.WriteMetaJson)
     {
         if (!Directory.Exists(tmpDir))
@@ -509,7 +509,7 @@ async Task CheckUpdateAsync()
     }
 }
 
-// 重定向
+// Redirect
 async Task<string> Get302Async(string url)
 {
     // this allows you to set the settings so that we can get the redirect url

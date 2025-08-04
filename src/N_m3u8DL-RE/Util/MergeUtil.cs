@@ -14,7 +14,7 @@ namespace N_m3u8DL_RE.Util
     internal static class MergeUtil
     {
         /// <summary>
-        /// 输入一堆已存在的文件，合并到新文件
+        /// Merge a list of existing files into a new file
         /// </summary>
         /// <param name="files"></param>
         /// <param name="outputFilePath"></param>
@@ -84,9 +84,9 @@ namespace N_m3u8DL_RE.Util
             int div = files.Length <= 90000 ? 100 : 200;
 
             string outputName = Path.Combine(Path.GetDirectoryName(files[0])!, "T");
-            int index = 0; // 序号
+            int index = 0; // Index
 
-            // 按照div的容量分割为小数组
+            // Split into smaller arrays according to div
             string[][] li = [.. Enumerable.Range(0, (files.Length / div) + 1).Select(x => files.Skip(x * div).Take(div).ToArray())];
             foreach (string[]? items in li)
             {
@@ -98,7 +98,7 @@ namespace N_m3u8DL_RE.Util
                 string output = outputName + index.ToString("0000", CultureInfo.InvariantCulture) + ".ts";
                 CombineMultipleFilesIntoSingleFile(items, output);
                 newFiles.Add(output);
-                // 合并后删除这些文件
+                // Delete these files after merging
                 foreach (string? item in items)
                 {
                     File.Delete(item);
@@ -114,7 +114,7 @@ namespace N_m3u8DL_RE.Util
             bool writeDate = true, bool useConcatDemuxer = false, string poster = "", string audioName = "", string title = "",
             string copyright = "", string comment = "", string encodingTool = "", string recTime = "")
         {
-            // 改为绝对路径
+            // Change to absolute path
             outputPath = Path.GetFullPath(outputPath);
 
             string dateString = string.IsNullOrEmpty(recTime) ? DateTime.Now.ToString("o") : recTime;
@@ -130,7 +130,7 @@ namespace N_m3u8DL_RE.Util
 
             if (useConcatDemuxer)
             {
-                // 使用 concat demuxer合并
+                // Use concat demuxer to merge
                 string text = string.Join(Environment.NewLine, files.Select(f => $"file '{f}'"));
                 string tempFile = Path.GetTempFileName();
                 File.WriteAllText(tempFile, text);
@@ -217,7 +217,7 @@ namespace N_m3u8DL_RE.Util
 
             if (muxFormat == MuxFormat.MP4)
             {
-                _ = command.Append($" -strict unofficial -c:a copy -c:v copy -c:s mov_text "); // mp4不支持vtt/srt字幕，必须转换格式
+                _ = command.Append($" -strict unofficial -c:a copy -c:v copy -c:s mov_text "); // mp4 does not support vtt/srt subtitles, must convert format
             }
             else
             {
@@ -235,7 +235,7 @@ namespace N_m3u8DL_RE.Util
             int streamIndex = 0;
             for (int i = 0; i < files.Length; i++)
             {
-                // 转换语言代码
+                // Convert language code
                 LanguageCodeUtil.ConvertLangCodeAndDisplayName(files[i]);
                 _ = command.Append(CultureInfo.InvariantCulture, $" -metadata:s:{streamIndex} language=\"{files[i].LangCode ?? "und"}\" ");
                 if (!string.IsNullOrEmpty(files[i].Description))
@@ -243,9 +243,9 @@ namespace N_m3u8DL_RE.Util
                     _ = command.Append(CultureInfo.InvariantCulture, $" -metadata:s:{streamIndex} title=\"{files[i].Description}\" ");
                 }
                 /**
-                 * -metadata:s:xx标记的是 输出的第xx个流的metadata，
-                 * 若输入文件存在不止一个流时，这里单纯使用files的index
-                 * 就有可能出现metadata错位的情况，所以加了如下逻辑
+                 * -metadata:s:xx marks the metadata of the xx-th stream output,
+                 * If there is more than one stream in the input file, here simply using the index of files
+                 * may cause metadata misalignment, so the following logic is added
                  */
                 if (files[i].Mediainfos.Count > 0)
                 {
@@ -264,7 +264,7 @@ namespace N_m3u8DL_RE.Util
             {
                 _ = command.Append(" -disposition:v:0 default ");
             }
-            // 字幕都不设置默认
+            // Subtitles do not set default
             if (subTracks.Any())
             {
                 _ = command.Append(" -disposition:s 0 ");
@@ -272,7 +272,7 @@ namespace N_m3u8DL_RE.Util
 
             if (audioTracks.Any())
             {
-                // 音频除了第一个音轨 都不设置默认
+                // Audio tracks other than the first one do not set default
                 _ = command.Append(" -disposition:a:0 default ");
                 for (int i = 1; i < audioTracks.Count(); i++)
                 {
@@ -304,15 +304,15 @@ namespace N_m3u8DL_RE.Util
             // LANG and NAME
             for (int i = 0; i < files.Length; i++)
             {
-                // 转换语言代码
+                // Convert language code
                 LanguageCodeUtil.ConvertLangCodeAndDisplayName(files[i]);
                 _ = command.Append(CultureInfo.InvariantCulture, $" --language 0:\"{files[i].LangCode ?? "und"}\" ");
-                // 字幕都不设置默认
+                // Subtitles do not set default
                 if (files[i].MediaType == MediaType.SUBTITLES)
                 {
                     _ = command.Append($" --default-track 0:no ");
                 }
-                // 音频除了第一个音轨 都不设置默认
+                // Audio tracks other than the first one do not set default
                 if (files[i].MediaType == MediaType.AUDIO)
                 {
                     if (dFlag)

@@ -11,11 +11,11 @@ namespace N_m3u8DL_RE.StreamParser.Util
         private static partial Regex VarsNumberRegex();
 
         /// <summary>
-        /// 从以下文本中获取参数
+        /// Get parameters from the following text
         /// #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2149280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=1280x720,NAME="720"
         /// </summary>
-        /// <param name="line">等待被解析的一行文本</param>
-        /// <param name="key">留空则获取第一个英文冒号后的全部字符</param>
+        /// <param name="line">The line of text to be parsed</param>
+        /// <param name="key">If empty, get all characters after the first English colon</param>
         /// <returns></returns>
         public static string GetAttribute(string line, string key = "")
         {
@@ -45,7 +45,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
         }
 
         /// <summary>
-        /// 从如下文本中提取
+        /// Extract from the following text
         /// <n>[@<o>]
         /// </summary>
         /// <param name="input"></param>
@@ -63,7 +63,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
         }
 
         /// <summary>
-        /// 从100-300这种字符串中获取StartRange, ExpectLength信息
+        /// Get StartRange, ExpectLength information from a string like 100-300
         /// </summary>
         /// <param name="range"></param>
         /// <returns>StartRange, ExpectLength</returns>
@@ -75,7 +75,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
         }
 
         /// <summary>
-        /// MPD SegmentTemplate替换
+        /// MPD SegmentTemplate replacement
         /// </summary>
         /// <param name="text"></param>
         /// <param name="keyValuePairs"></param>
@@ -90,7 +90,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
                 }
             }
 
-            // 处理特殊形式数字 如 $Number%05d$
+            // Process special form numbers, such as $Number%05d$
             Regex regex = VarsNumberRegex();
             if (regex.IsMatch(text) && keyValuePairs.TryGetValue(DASHTags.TemplateNumber, out object? keyValuePair))
             {
@@ -104,7 +104,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
         }
 
         /// <summary>
-        /// 拼接Baseurl和RelativeUrl
+        /// Concatenate Baseurl and RelativeUrl
         /// </summary>
         /// <param name="baseurl">Baseurl</param>
         /// <param name="url">RelativeUrl</param>
@@ -116,7 +116,7 @@ namespace N_m3u8DL_RE.StreamParser.Util
                 return url;
             }
 
-            Uri uri1 = new(baseurl);  // 这里直接传完整的URL即可
+            Uri uri1 = new(baseurl);  // Here you can directly pass the complete URL
             Uri uri2 = new(uri1, url);
             url = uri2.ToString();
 

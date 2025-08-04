@@ -19,7 +19,7 @@ namespace N_m3u8DL_RE.StreamParser
         private string? rawText;
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
-        public Dictionary<string, string> RawFiles { get; set; } = []; // 存储（文件名,文件内容）
+        public Dictionary<string, string> RawFiles { get; set; } = []; // Store (file name, file content)
 
         public async Task LoadSourceFromUrlAsync(string url)
         {
@@ -94,7 +94,7 @@ namespace N_m3u8DL_RE.StreamParser
         }
 
         /// <summary>
-        /// 开始解析流媒体信息
+        /// Start parsing stream media information
         /// </summary>
         /// <returns></returns>
         public async Task<List<StreamSpec>> ExtractStreamsAsync()
@@ -117,7 +117,7 @@ namespace N_m3u8DL_RE.StreamParser
         }
 
         /// <summary>
-        /// 根据规格说明填充媒体播放列表信息
+        /// Fill media playlist information according to specification
         /// </summary>
         /// <param name="streamSpecs"></param>
         public async Task FetchPlayListAsync(List<StreamSpec> streamSpecs)

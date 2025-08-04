@@ -68,7 +68,7 @@ namespace N_m3u8DL_RE.Util
                 return false;
             }
 
-            // shakaPackager/ffmpeg 无法单独解密init文件
+            // shakaPackager/ffmpeg cannot decrypt init files individually
             if (source.EndsWith("_init.mp4", StringComparison.OrdinalIgnoreCase) && decryptEngine != DecryptEngine.MP4DECRYPT)
             {
                 return false;
@@ -220,10 +220,10 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 从文本文件中查询KID的KEY
+        /// Search for the KEY of the KID in the text file
         /// </summary>
-        /// <param name="file">文本文件</param>
-        /// <param name="kid">目标KID</param>
+        /// <param name="file">Text file</param>
+        /// <param name="kid">Target KID</param>
         /// <returns></returns>
         public static async Task<string?> SearchKeyFromFileAsync(string? file, string? kid)
         {

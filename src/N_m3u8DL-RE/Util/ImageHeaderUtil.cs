@@ -5,22 +5,22 @@ namespace N_m3u8DL_RE.Util
         public static bool IsImageHeader(byte[] bArr)
         {
             int size = bArr.Length;
-            // PNG HEADER检测
+            // PNG header detection
             if (size > 3 && 137 == bArr[0] && 80 == bArr[1] && 78 == bArr[2] && 71 == bArr[3])
             {
                 return true;
             }
-            // GIF HEADER检测
+            // GIF header detection
             if (size > 3 && 0x47 == bArr[0] && 0x49 == bArr[1] && 0x46 == bArr[2] && 0x38 == bArr[3])
             {
                 return true;
             }
-            // BMP HEADER检测
+            // BMP header detection
             if (size > 10 && 0x42 == bArr[0] && 0x4D == bArr[1] && 0x00 == bArr[5] && 0x00 == bArr[6] && 0x00 == bArr[7] && 0x00 == bArr[8])
             {
                 return true;
             }
-            // JPEG HEADER检测
+            // JPEG header detection
             return size > 3 && 0xFF == bArr[0] && 0xD8 == bArr[1] && 0xFF == bArr[2];
         }
 
@@ -28,7 +28,7 @@ namespace N_m3u8DL_RE.Util
         {
             byte[] sourceData = await File.ReadAllBytesAsync(sourcePath);
 
-            // PNG HEADER
+            // PNG header
             if (137 == sourceData[0] && 80 == sourceData[1] && 78 == sourceData[2] && 71 == sourceData[3])
             {
                 if (sourceData.Length > 120 && 137 == sourceData[0] && 80 == sourceData[1] && 78 == sourceData[2] && 71 == sourceData[3] && 96 == sourceData[118] && 130 == sourceData[119])
@@ -49,7 +49,7 @@ namespace N_m3u8DL_RE.Util
                 }
                 else
                 {
-                    // 手动查询结尾标记 0x47 出现两次
+                    // Manually query the end marker 0x47, which appears twice
                     int skip = 0;
                     for (int i = 4; i < sourceData.Length - (188 * 2) - 4; i++)
                     {
@@ -62,20 +62,20 @@ namespace N_m3u8DL_RE.Util
                     sourceData = sourceData[skip..];
                 }
             }
-            // GIF HEADER
+            // GIF header
             else if (0x47 == sourceData[0] && 0x49 == sourceData[1] && 0x46 == sourceData[2] && 0x38 == sourceData[3])
             {
                 sourceData = sourceData[42..];
             }
-            // BMP HEADER
+            // BMP header
             else if (0x42 == sourceData[0] && 0x4D == sourceData[1] && 0x00 == sourceData[5] && 0x00 == sourceData[6] && 0x00 == sourceData[7] && 0x00 == sourceData[8])
             {
                 sourceData = sourceData[0x3E..];
             }
-            // JPEG HEADER检测
+            // JPEG header detection
             else if (0xFF == sourceData[0] && 0xD8 == sourceData[1] && 0xFF == sourceData[2])
             {
-                // 手动查询结尾标记 0x47 出现两次
+                // Manually query the end marker 0x47, which appears twice
                 int skip = 0;
                 for (int i = 4; i < sourceData.Length - (188 * 2) - 4; i++)
                 {

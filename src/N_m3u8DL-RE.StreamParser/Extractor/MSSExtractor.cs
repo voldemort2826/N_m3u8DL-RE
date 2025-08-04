@@ -52,7 +52,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
             XDocument xmlDocument = XDocument.Parse(IsmContent);
 
-            // 选中第一个SmoothStreamingMedia节点
+            // Select the first SmoothStreamingMedia node
             XElement ssmElement = xmlDocument.Elements().First(e => e.Name.LocalName == "SmoothStreamingMedia");
             string timeScaleStr = ssmElement.Attribute("TimeScale")?.Value ?? "10000000";
             string? durationStr = ssmElement.Attribute("Duration")?.Value;
@@ -64,7 +64,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             string protectionSystemId = "";
             string protectionData = "";
 
-            // 加密检测
+            // Encryption detection
             XElement? protectElement = ssmElement.Elements().FirstOrDefault(e => e.Name.LocalName == "Protection");
             if (protectElement != null)
             {
@@ -77,7 +77,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 }
             }
 
-            // 所有StreamIndex节点
+            // All StreamIndex nodes
             IEnumerable<XElement> streamIndexElements = ssmElement.Elements().Where(e => e.Name.LocalName == "StreamIndex");
 
             foreach (XElement? streamIndex in streamIndexElements)
@@ -85,21 +85,21 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 string? type = streamIndex.Attribute("Type")?.Value; // "video" / "audio" / "text"
                 string? name = streamIndex.Attribute("Name")?.Value;
                 string? subType = streamIndex.Attribute("Subtype")?.Value; // text track
-                // 如果有则不从QualityLevel读取
+                // If there is, do not read from QualityLevel
                 // Bitrate = "{bitrate}" / "{Bitrate}"
                 // StartTimeSubstitution = "{start time}" / "{start_time}"
                 string? urlPattern = streamIndex.Attribute("Url")?.Value;
                 string? language = streamIndex.Attribute("Language")?.Value;
-                // 去除不规范的语言标签
+                // Remove non-standard language tags
                 if (language?.Length != 3)
                 {
                     language = null;
                 }
 
-                // 所有c节点
+                // All c nodes
                 IEnumerable<XElement> cElements = streamIndex.Elements().Where(e => e.Name.LocalName == "c");
 
-                // 所有QualityLevel节点
+                // All QualityLevel nodes
                 IEnumerable<XElement> qualityLevelElements = streamIndex.Elements().Where(e => e.Name.LocalName == "QualityLevel");
 
                 foreach (XElement? qualityLevel in qualityLevelElements)
@@ -120,7 +120,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
                     StreamSpec streamSpec = new()
                     {
-                        PublishTime = DateTime.Now, // 发布时间默认现在
+                        PublishTime = DateTime.Now, // Publish time defaults to now
                         Extension = "m4s",
                         OriginalUrl = ParserConfig.OriginalUrl,
                         PeriodId = indexStr,
@@ -147,7 +147,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                     streamSpec.Playlist.MediaInit = new MediaSegment();
                     if (!string.IsNullOrEmpty(codecPrivateData))
                     {
-                        streamSpec.Playlist.MediaInit.Index = -1; // 便于排序
+                        streamSpec.Playlist.MediaInit.Index = -1; // For sorting
                         streamSpec.Playlist.MediaInit.Url = $"hex://{codecPrivateData}";
                     }
 
@@ -160,7 +160,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
                     foreach (XElement? c in cElements)
                     {
-                        // 每个C元素包含三个属性:@t(start time)\@r(repeat count)\@d(duration)
+                        // Each C element contains three attributes:@t(start time)\@r(repeat count)\@d(duration)
                         string? _startTimeStr = c.Attribute("t")?.Value;
                         string? _durationStr = c.Attribute("d")?.Value;
                         string? _repeatCountStr = c.Attribute("r")?.Value;
@@ -195,7 +195,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         streamSpec.Playlist.MediaParts[0].MediaSegments.Add(mediaSegment);
                         if (_repeatCount < 0)
                         {
-                            // 负数表示一直重复 直到period结束 注意减掉已经加入的1个片段
+                            // Negative numbers mean to repeat until the period ends, note to subtract the already added 1 fragment
                             _repeatCount = (long)Math.Ceiling(Convert.ToInt64(durationStr, CultureInfo.InvariantCulture) / (double)_duration) - 1;
                         }
                         for (long i = 0; i < _repeatCount; i++)
@@ -218,7 +218,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         currentTime += _duration;
                     }
 
-                    // 生成MOOV数据
+                    // Generate MOOV data
                     if (MSSMoovProcessor.CanHandle(fourCC!))
                     {
                         streamSpec.MSSData = new MSSData()
@@ -237,9 +237,9 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             ProtectionSystemID = protectionSystemId,
                         };
                         MSSMoovProcessor processor = new(streamSpec);
-                        byte[] header = processor.GenHeader(); // trackId可能不正确
+                        byte[] header = processor.GenHeader(); // trackId may be incorrect
                         streamSpec.Playlist!.MediaInit!.Url = $"base64://{Convert.ToBase64String(header)}";
-                        // 为音视频写入加密信息
+                        // Write encryption information to audio and video
                         if (isProtection && type != "text")
                         {
                             if (streamSpec.Playlist.MediaInit != null)
@@ -260,7 +260,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 }
             }
 
-            // 为视频设置默认轨道
+            // Set default track for video
             List<StreamSpec> aL = [.. streamList.Where(s => s.MediaType == MediaType.AUDIO)];
             List<StreamSpec> sL = [.. streamList.Where(s => s.MediaType == MediaType.SUBTITLES)];
             foreach (StreamSpec? item in streamList.Where(item => !string.IsNullOrEmpty(item.Resolution)))
@@ -279,7 +279,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
         }
 
         /// <summary>
-        /// 解析编码
+        /// Parse codecs
         /// </summary>
         /// <param name="fourCC"></param>
         /// <returns></returns>
@@ -291,11 +291,11 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 ? null
                 : fourCC switch
                 {
-                    // AVC视频
+                    // AVC video
                     "H264" or "X264" or "DAVC" or "AVC1" => ParseAVCCodecs(privateData),
-                    // AAC音频
+                    // AAC audio
                     "AAC" or "AACL" or "AACH" or "AACP" => ParseAACCodecs(fourCC, privateData),
-                    // 默认返回fourCC本身
+                    // Default return fourCC itself
                     _ => fourCC.ToLowerInvariant()
                 };
         }
@@ -323,7 +323,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
         public async Task FetchPlayListAsync(List<StreamSpec> streamSpecs)
         {
-            // 这里才调用URL预处理器，节省开销
+            // Here the URL pre-processor is called, saving overhead
             await ProcessUrlAsync(streamSpecs);
         }
 
@@ -392,7 +392,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             }
             catch (HttpRequestException) when (ParserConfig.Url != ParserConfig.OriginalUrl)
             {
-                // 当URL无法访问时，再请求原始URL
+                // When the URL cannot be accessed, request the original URL again
                 (rawText, url) = await HTTPUtil.GetWebSourceAndNewUrlAsync(ParserConfig.OriginalUrl, ParserConfig.Headers);
             }
 
@@ -402,8 +402,8 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             List<StreamSpec> newStreams = await ExtractStreamsAsync(rawText);
             foreach (StreamSpec streamSpec in streamSpecs)
             {
-                // 有的网站每次请求MPD返回的码率不一致，导致ToShortString()无法匹配 无法更新playlist
-                // 故增加通过init url来匹配 (如果有的话)
+                // Some websites return inconsistent bit rates each time MPD is requested, causing ToShortString() to not match and the playlist to not be updated
+                // Therefore, add matching through init url (if there is one)
                 IEnumerable<StreamSpec> match = newStreams.Where(n => n.ToShortString() == streamSpec.ToShortString());
                 if (!match.Any())
                 {
@@ -412,10 +412,10 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
                 if (match.Any())
                 {
-                    streamSpec.Playlist!.MediaParts = match.First().Playlist!.MediaParts; // 不更新init
+                    streamSpec.Playlist!.MediaParts = match.First().Playlist!.MediaParts; // Do not update init
                 }
             }
-            // 这里才调用URL预处理器，节省开销
+            // Here the URL pre-processor is called, saving overhead
             await ProcessUrlAsync(streamSpecs);
         }
     }

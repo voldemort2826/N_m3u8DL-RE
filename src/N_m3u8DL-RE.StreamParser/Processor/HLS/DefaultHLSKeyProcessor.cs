@@ -32,7 +32,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
             {
                 encryptInfo.IV = HexUtil.HexToBytes(iv);
             }
-            // 自定义IV
+            // Custom IV
             if (parserConfig.CustomeIV is { Length: > 0 })
             {
                 encryptInfo.IV = parserConfig.CustomeIV;
@@ -95,7 +95,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 return encryptInfo;
             }
 
-            // 处理自定义加密方式
+            // Process custom encryption method
             encryptInfo.Method = parserConfig.CustomMethod.Value;
             Logger.Warn("METHOD changed from {} to {}", method, encryptInfo.Method);
 
@@ -103,7 +103,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
         }
 
         /// <summary>
-        /// 预处理URL
+        /// Preprocess URL
         /// </summary>
         private static string PreProcessUrl(string url, ParserConfig parserConfig)
         {

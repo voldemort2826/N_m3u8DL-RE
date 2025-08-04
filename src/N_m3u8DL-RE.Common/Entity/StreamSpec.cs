@@ -13,13 +13,13 @@ namespace N_m3u8DL_RE.Common.Entity
         public string? Name { get; set; }
         public Choice? Default { get; set; }
 
-        // 由于用户选择 被跳过的分片总时长
+        // Skipped segment duration due to user selection
         public double? SkippedDuration { get; set; }
 
-        // MSS信息
+        // MSS information
         public MSSData? MSSData { get; set; }
 
-        // 基本信息
+        // Basic information
         public int? Bandwidth { get; set; }
         public string? Codecs { get; set; }
         public string? Resolution { get; set; }
@@ -30,14 +30,14 @@ namespace N_m3u8DL_RE.Common.Entity
         // Dash
         public RoleType? Role { get; set; }
 
-        // 补充信息-色域
+        // Additional information - color gamut
         public string? VideoRange { get; set; }
-        // 补充信息-特征
+        // Additional information - characteristics
         public string? Characteristics { get; set; }
-        // 发布时间（仅MPD需要）
+        // Publication time (only needed for MPD)
         public DateTime? PublishTime { get; set; }
 
-        // 外部轨道GroupId (后续寻找对应轨道信息)
+        // External track GroupId (subsequent search for corresponding track information)
         public string? AudioId { get; set; }
         public string? VideoId { get; set; }
         public string? SubtitleId { get; set; }
@@ -50,7 +50,7 @@ namespace N_m3u8DL_RE.Common.Entity
         public string Url { get; set; } = string.Empty;
 
         /// <summary>
-        /// 原始URL
+        /// Original URL
         /// </summary>
         public string OriginalUrl { get; set; } = string.Empty;
 
@@ -133,7 +133,7 @@ namespace N_m3u8DL_RE.Common.Entity
             string encStr = string.Empty;
             string segmentsCountStr = SegmentsCount == 0 ? "" : (SegmentsCount > 1 ? $"{SegmentsCount} Segments" : $"{SegmentsCount} Segment");
 
-            // 增加加密标志
+            // Add encryption flag
             if (Playlist != null && Playlist.MediaParts.Any(m => m.MediaSegments.Any(s => s.EncryptInfo.Method != EncryptMethod.NONE)))
             {
                 IEnumerable<EncryptMethod> ms = Playlist.MediaParts.SelectMany(m => m.MediaSegments.Select(s => s.EncryptInfo.Method)).Where(e => e != EncryptMethod.NONE).Distinct();
@@ -165,7 +165,7 @@ namespace N_m3u8DL_RE.Common.Entity
                 returnStr = returnStr.Replace("|  |", "|");
             }
 
-            // 计算时长
+            // Calculate duration
             if (Playlist != null)
             {
                 double total = Playlist.TotalDuration;

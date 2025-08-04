@@ -29,7 +29,7 @@ namespace N_m3u8DL_RE.Column
             SpeedContainer speedContainer = SpeedContainerDic[task.Id];
             long size = speedContainer.RDownloaded;
 
-            // 一秒汇报一次即可
+            // Report once per second
             if (DateTimeStringDic.TryGetValue(task.Id, out string? oldTime) && oldTime != now)
             {
                 long totalSize = speedContainer.SingleSegment ? (speedContainer.ResponseLength ?? 0) : (long)(size / (task.Value / task.MaxValue));

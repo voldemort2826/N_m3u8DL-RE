@@ -5,7 +5,7 @@ using N_m3u8DL_RE.StreamParser.Config;
 namespace N_m3u8DL_RE.StreamParser.Processor.DASH
 {
     /// <summary>
-    /// XG视频处理
+    /// XG video processing
     /// </summary>
     public class DefaultDASHContentProcessor : ContentProcessor
     {

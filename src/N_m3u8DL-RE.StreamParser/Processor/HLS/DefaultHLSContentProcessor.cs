@@ -28,14 +28,14 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
 
         public override string Process(string rawText, ParserConfig parserConfig)
         {
-            // 处理content以\r作为换行符的情况
+            // Process content with \r as line break
             if (rawText.Contains('\r') && !rawText.Contains('\n'))
             {
                 rawText = rawText.Replace("\r", Environment.NewLine);
             }
 
             string m3u8Url = parserConfig.Url;
-            // YSP回放
+            // YSP playback
             if (m3u8Url.Contains("tlivecloud-playback-cdn.ysp.cctv.cn") && m3u8Url.Contains("endtime="))
             {
                 rawText += Environment.NewLine + HLSTags.ext_x_endlist;
@@ -47,7 +47,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 // M3u8Content = DecodeImooc.DecodeM3u8(M3u8Content);
             }
 
-            // 针对YK #EXT-X-VERSION:7杜比视界片源修正
+            // Fix YK #EXT-X-VERSION:7 Dolby Vision source
             if (rawText.Contains("#EXT-X-DISCONTINUITY") && rawText.Contains("#EXT-X-MAP") && rawText.Contains("ott.cibntv.net") && rawText.Contains("ccode="))
             {
                 Regex ykmap = YkDVRegex();
@@ -57,7 +57,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 }
             }
 
-            // 针对Disney+修正
+            // Fix Disney+
             if (rawText.Contains("#EXT-X-DISCONTINUITY") && rawText.Contains("#EXT-X-MAP") && m3u8Url.Contains("media.dssott.com/"))
             {
                 Regex ykmap = DNSPRegex();
@@ -67,7 +67,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 }
             }
 
-            // 针对Disney+字幕修正
+            // Fix Disney+ subtitles
             if (rawText.Contains("#EXT-X-DISCONTINUITY") && rawText.Contains("seg_00000.vtt") && m3u8Url.Contains("media.dssott.com/"))
             {
                 Regex ykmap = DNSPSubRegex();
@@ -77,10 +77,10 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 }
             }
 
-            // 针对AppleTv修正
+            // Fix AppleTv
             if (rawText.Contains("#EXT-X-DISCONTINUITY") && rawText.Contains("#EXT-X-MAP") && (m3u8Url.Contains(".apple.com/") || ATVRegex().IsMatch(rawText)))
             {
-                // 只取加密部分即可
+                // Only take the encrypted part
                 Regex ykmap = ATVRegex2();
                 if (ykmap.IsMatch(rawText))
                 {
@@ -88,7 +88,7 @@ namespace N_m3u8DL_RE.StreamParser.Processor.HLS
                 }
             }
 
-            // 修复#EXT-X-KEY与#EXTINF出现次序异常问题
+            // Fix #EXT-X-KEY and #EXTINF order exception
             Regex regex = OrderFixRegex();
             if (regex.IsMatch(rawText))
             {

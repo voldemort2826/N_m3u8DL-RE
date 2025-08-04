@@ -69,27 +69,27 @@ namespace N_m3u8DL_RE.CommandLine
         private static readonly Option<long?> MaxSpeed = new("-R", "--max-speed") { Description = ResString.CmdMaxSpeed, CustomParser = ParseSpeedLimit, HelpName = "SPEED" };
 
 
-        // 代理选项
+        // Proxy options
         private static readonly Option<bool> UseSystemProxy = new("--use-system-proxy") { Description = ResString.CmdUseSystemProxy, DefaultValueFactory = (_) => true };
         private static readonly Option<WebProxy?> CustomProxy = new("--custom-proxy") { Description = ResString.CmdCustomProxy, CustomParser = ParseProxy, HelpName = "URL" };
 
-        // 只下载部分分片
+        // Only download part of the segment
         private static readonly Option<CustomRange?> CustomRange = new("--custom-range") { Description = ResString.CmdCustomRange, CustomParser = ParseCustomRange, HelpName = "RANGE" };
 
 
         // morehelp
         private static readonly Option<string?> MoreHelp = new("--morehelp") { Description = ResString.CmdMoreHelp, HelpName = "OPTION" };
 
-        // 自定义KEY等
+        // Custom KEY etc.
         private static readonly Option<EncryptMethod?> CustomHLSMethod = new("--custom-hls-method") { Description = ResString.CmdCustomHLSMethod, HelpName = "METHOD" };
         private static readonly Option<byte[]?> CustomHLSKey = new("--custom-hls-key") { Description = ResString.CmdCustomHLSKey, CustomParser = ParseHLSCustomKey, HelpName = "FILE|HEX|BASE64" };
         private static readonly Option<byte[]?> CustomHLSIv = new("--custom-hls-iv") { Description = ResString.CmdCustomHLSIv, CustomParser = ParseHLSCustomKey, HelpName = "FILE|HEX|BASE64" };
 
-        // 任务开始时间
+        // Task start time
         private static readonly Option<DateTime?> TaskStartAt = new("--task-start-at") { Description = ResString.CmdTaskStartAt, CustomParser = ParseStartTime, HelpName = "yyyyMMddHHmmss" };
 
 
-        // 直播相关
+        // Live related
         private static readonly Option<bool> LivePerformAsVod = new("--live-perform-as-vod") { Description = ResString.CmdLivePerformAsVod, DefaultValueFactory = (_) => false };
         private static readonly Option<bool> LiveRealTimeMerge = new("--live-real-time-merge") { Description = ResString.CmdLiveRealTimeMerge, DefaultValueFactory = (_) => false };
         private static readonly Option<bool> LiveKeepSegments = new("--live-keep-segments") { Description = ResString.CmdLiveKeepSegments, DefaultValueFactory = (_) => true };
@@ -100,7 +100,7 @@ namespace N_m3u8DL_RE.CommandLine
         private static readonly Option<bool> LiveFixVttByAudio = new("--live-fix-vtt-by-audio") { Description = ResString.CmdLiveFixVttByAudio, DefaultValueFactory = (_) => false };
 
 
-        // 复杂命令行如下
+        // Complex command line
         private static readonly Option<MuxOptions?> MuxAfterDone = new("-M", "--mux-after-done") { Description = ResString.CmdMuxAfterDone, CustomParser = ParseMuxAfterDone, HelpName = "OPTIONS" };
         private static readonly Option<List<OutputFile>> MuxImports = new("--mux-import") { Description = ResString.CmdMuxImport, CustomParser = ParseImports, Arity = ArgumentArity.OneOrMore, AllowMultipleArgumentsPerToken = false, HelpName = "OPTIONS" };
         private static readonly Option<StreamFilter?> VideoFilter = new("-sv", "--select-video") { Description = ResString.CmdSelectVideo, CustomParser = ParseStreamFilter, HelpName = "OPTIONS" };
@@ -112,7 +112,7 @@ namespace N_m3u8DL_RE.CommandLine
         private static readonly Option<StreamFilter?> DropSubtitleFilter = new("-ds", "--drop-subtitle") { Description = ResString.CmdDropSubtitle, CustomParser = ParseStreamFilter, HelpName = "OPTIONS" };
 
         /// <summary>
-        /// 解析下载速度限制
+        /// Parse download speed limit
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -138,7 +138,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析用户定义的下载范围
+        /// Parse user-defined download range
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -146,7 +146,7 @@ namespace N_m3u8DL_RE.CommandLine
         private static CustomRange? ParseCustomRange(ArgumentResult result)
         {
             string input = result.Tokens[0].Value;
-            // 支持的种类 0-100; 01:00:00-02:30:00; -300; 300-; 05:00-; -03:00;
+            // Supported types: 0-100; 01:00:00-02:30:00; -300; 300-; 05:00-; -03:00;
             try
             {
                 if (string.IsNullOrEmpty(input))
@@ -192,7 +192,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析用户代理
+        /// Parse user agent
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -224,7 +224,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析自定义KEY
+        /// Parse custom KEY
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -247,7 +247,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析录制直播时长限制
+        /// Parse live recording duration limit
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -266,7 +266,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析任务开始时间
+        /// Parse task start time
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -322,7 +322,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 流过滤器
+        /// Stream filter
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -333,7 +333,7 @@ namespace N_m3u8DL_RE.CommandLine
             ComplexParamParser p = new(input);
 
 
-            // 目标范围
+            // Target range
             string forStr;
             if (input == ForStrRegex().Match(input).Value)
             {
@@ -450,7 +450,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 分割Header
+        /// Split header
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -461,7 +461,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析混流引入的外部文件
+        /// Parse external files imported by mux
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -472,7 +472,7 @@ namespace N_m3u8DL_RE.CommandLine
             foreach (Token item in result.Tokens)
             {
                 ComplexParamParser p = new(item.Value);
-                string path = p.GetValue("path") ?? item.Value; // 若未获取到，直接整个字符串作为path
+                string path = p.GetValue("path") ?? item.Value; // If not obtained, use the entire string as path
                 string? lang = p.GetValue("lang");
                 string? name = p.GetValue("name");
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -493,7 +493,7 @@ namespace N_m3u8DL_RE.CommandLine
         }
 
         /// <summary>
-        /// 解析混流选项
+        /// Parse mux options
         /// </summary>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -501,43 +501,43 @@ namespace N_m3u8DL_RE.CommandLine
         {
             string v = result.Tokens[0].Value;
             ComplexParamParser p = new(v);
-            // 混流格式
-            string format = p.GetValue("format") ?? v.Split(':')[0]; // 若未获取到，直接:前的字符串作为format解析
+            // Mux format
+            string format = p.GetValue("format") ?? v.Split(':')[0]; // If not obtained, use the string before : as format
             bool parseResult = Enum.TryParse(format.ToUpperInvariant(), out MuxFormat muxFormat);
             if (!parseResult)
             {
                 result.AddError($"format={format} not valid");
                 return null;
             }
-            // 混流器
+            // Muxer
             string muxer = p.GetValue("muxer") ?? "ffmpeg";
             if (muxer is not "ffmpeg" and not "mkvmerge")
             {
                 result.AddError($"muxer={muxer} not valid");
                 return null;
             }
-            // 混流器路径
+            // Muxer path
             string bin_path = p.GetValue("bin_path") ?? "auto";
             if (string.IsNullOrEmpty(bin_path))
             {
                 result.AddError($"bin_path={bin_path} not valid");
                 return null;
             }
-            // 是否删除
+            // Whether to delete
             string keep = p.GetValue("keep") ?? "false";
             if (keep is not "true" and not "false")
             {
                 result.AddError($"keep={keep} not valid");
                 return null;
             }
-            // 是否忽略字幕
+            // Whether to ignore subtitles
             string skipSub = p.GetValue("skip_sub") ?? "false";
             if (skipSub is not "true" and not "false")
             {
                 result.AddError($"skip_sub={keep} not valid");
                 return null;
             }
-            // 冲突检测
+            // Conflict detection
             if (muxer == "mkvmerge" && format == "mp4")
             {
                 result.AddError("mkvmerge can not do mp4");
@@ -686,7 +686,7 @@ namespace N_m3u8DL_RE.CommandLine
                 }
 
 
-                // 以用户选择语言为准优先
+                // Priority is given to user-selected language
                 if (myOption.UILanguage != null)
                 {
                     CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(myOption.UILanguage);
@@ -694,7 +694,7 @@ namespace N_m3u8DL_RE.CommandLine
                     Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(myOption.UILanguage);
                 }
 
-                // 混流设置
+                // Mux settings
                 MuxOptions? muxAfterDoneValue = parseResult.GetValue(MuxAfterDone);
                 if (muxAfterDoneValue != null)
                 {

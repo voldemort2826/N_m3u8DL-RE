@@ -13,7 +13,7 @@ using Spectre.Console;
 namespace N_m3u8DL_RE.Downloader
 {
     /// <summary>
-    /// 简单下载器
+    /// Simple downloader
     /// </summary>
     internal sealed class SimpleDownloader(DownloaderConfig config) : IDownloader
     {
@@ -67,18 +67,18 @@ namespace N_m3u8DL_RE.Downloader
                         break;
                 }
 
-                // Image头处理
+                // Image header processing
                 if (dResult.ImageHeader)
                 {
                     await ImageHeaderUtil.ProcessAsync(dResult.ActualFilePath);
                 }
-                // Gzip解压
+                // Gzip decompression
                 if (dResult.GzipHeader)
                 {
                     await OtherUtil.DeGzipFileAsync(dResult.ActualFilePath);
                 }
 
-                // 处理完成后改名
+                // Rename after processing
                 File.Move(dResult.ActualFilePath, des);
                 dResult.ActualFilePath = des;
             }
@@ -94,14 +94,14 @@ namespace N_m3u8DL_RE.Downloader
                 cancellationTokenSource = new();
                 string des = Path.ChangeExtension(path, null);
 
-                // 已下载跳过
+                // Skip if downloaded
                 if (File.Exists(des))
                 {
                     _ = speedContainer.Add(new FileInfo(des).Length);
                     return (des, new DownloadResult() { ActualContentLength = 0, ActualFilePath = des });
                 }
 
-                // 已解密跳过
+                // Skip if decrypted
                 string dec = Path.Combine(Path.GetDirectoryName(des)!, Path.GetFileNameWithoutExtension(des) + "_dec" + Path.GetExtension(des));
                 if (File.Exists(dec))
                 {
@@ -109,7 +109,7 @@ namespace N_m3u8DL_RE.Downloader
                     return (dec, new DownloadResult() { ActualContentLength = 0, ActualFilePath = dec });
                 }
 
-                // 另起线程进行监控
+                // Start a new thread to monitor
                 CancellationTokenSource cts = cancellationTokenSource;
                 using Task<Task> watcher = Task.Factory.StartNew(async () =>
                 {
@@ -130,7 +130,7 @@ namespace N_m3u8DL_RE.Downloader
                     }
                 });
 
-                // 调用下载
+                // Call download
                 DownloadResult result = await DownloadUtil.DownloadToFileAsync(url, path, speedContainer, cancellationTokenSource, headers, fromPosition, toPosition);
                 return (des, result);
 
@@ -158,7 +158,7 @@ namespace N_m3u8DL_RE.Downloader
             {
                 if (cancellationTokenSource != null)
                 {
-                    // 调用后销毁
+                    // Destroy after calling
                     cancellationTokenSource.Dispose();
                     cancellationTokenSource = null;
                 }

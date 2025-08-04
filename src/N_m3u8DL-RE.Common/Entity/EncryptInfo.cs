@@ -5,7 +5,7 @@ namespace N_m3u8DL_RE.Common.Entity
     public class EncryptInfo
     {
         /// <summary>
-        /// 加密方式，默认无加密
+        /// Encryption method, default is none
         /// </summary>
         public EncryptMethod Method { get; set; } = EncryptMethod.NONE;
 
@@ -15,7 +15,7 @@ namespace N_m3u8DL_RE.Common.Entity
         public EncryptInfo() { }
 
         /// <summary>
-        /// 创建EncryptInfo并尝试自动解析Method
+        /// Create EncryptInfo and try to automatically parse Method
         /// </summary>
         /// <param name="method"></param>
         public EncryptInfo(string method)

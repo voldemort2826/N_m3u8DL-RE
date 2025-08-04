@@ -42,7 +42,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 从输入自动获取文件名
+        /// Get the file name from the input automatically
         /// </summary>
         /// <param name="input"></param>
         /// <param name="addSuffix"></param>
@@ -64,7 +64,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 从 hh:mm:ss 解析TimeSpan
+        /// Parse TimeSpan from hh:mm:ss
         /// </summary>
         /// <param name="timeStr"></param>
         /// <returns></returns>
@@ -119,7 +119,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 从1h3m20s解析出总秒数
+        /// Parse the total number of seconds from 1h3m20s
         /// </summary>
         /// <param name="timeStr"></param>
         /// <returns></returns>
@@ -142,7 +142,7 @@ namespace N_m3u8DL_RE.Util
             return (hours * 3600) + (minutes * 60) + seconds;
         }
 
-        // 若该文件夹为空，删除，同时判断其父文件夹，直到遇到根目录或不为空的目录
+        // If the folder is empty, delete it, and check its parent folder until it encounters the root directory or a non-empty directory
         public static void SafeDeleteDir(string dirPath)
         {
             if (string.IsNullOrEmpty(dirPath) || !Directory.Exists(dirPath))
@@ -163,7 +163,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 解压并替换原文件
+        /// Decompress and replace the original file
         /// </summary>
         /// <param name="filePath"></param>
         public static async Task DeGzipFileAsync(string filePath)

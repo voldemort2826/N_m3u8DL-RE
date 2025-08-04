@@ -71,30 +71,30 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
             XDocument xmlDocument = XDocument.Parse(MpdContent);
 
-            // 选中第一个MPD节点
+            // Select the first MPD node
             XElement mpdElement = xmlDocument.Elements().First(e => e.Name.LocalName == "MPD");
 
-            // 类型 static点播, dynamic直播
+            // Type static point-to-view, dynamic live
             string? type = mpdElement.Attribute("type")?.Value;
             bool isLive = type == "dynamic";
 
-            // 分片最大时长
+            // Maximum duration of segments
             string? maxSegmentDuration = mpdElement.Attribute("maxSegmentDuration")?.Value;
-            // 分片从该时间起可用
+            // Segment available from this time
             string? availabilityStartTime = mpdElement.Attribute("availabilityStartTime")?.Value;
-            // 在availabilityStartTime的前XX段时间，分片有效
+            // Segment is valid for XX time before availabilityStartTime
             string? timeShiftBufferDepth = mpdElement.Attribute("timeShiftBufferDepth")?.Value;
             if (string.IsNullOrEmpty(timeShiftBufferDepth))
             {
-                // 如果没有 默认一分钟有效
+                // If there is no default, one minute is valid
                 timeShiftBufferDepth = "PT1M";
             }
-            // MPD发布时间
+            // MPD publication time
             string? publishTime = mpdElement.Attribute("publishTime")?.Value;
-            // MPD总时长
+            // MPD total duration
             string? mediaPresentationDuration = mpdElement.Attribute("mediaPresentationDuration")?.Value;
 
-            // 读取在MPD开头定义的<BaseURL>，并替换本身的URL
+            // Read the <BaseURL> defined at the beginning of the MPD and replace the URL itself
             XElement? baseUrlElement = mpdElement.Elements().FirstOrDefault(e => e.Name.LocalName == "BaseURL");
             if (baseUrlElement != null)
             {
@@ -107,40 +107,40 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 BaseUrl = ParserUtil.CombineURL(MpdUrl, baseUrl);
             }
 
-            // 全部Period
+            // All Periods
             IEnumerable<XElement> periods = mpdElement.Elements().Where(e => e.Name.LocalName == "Period");
             foreach (XElement? period in periods)
             {
-                // 本Period时长
+                // Duration of this Period
                 string? periodDuration = period.Attribute("duration")?.Value;
 
-                // 本Period ID
+                // ID of this Period
                 string? periodId = period.Attribute("id")?.Value;
 
-                // 最终分片会使用的baseurl
+                // Base URL used by the final segment
                 string segBaseUrl = BaseUrl;
 
-                // 处理baseurl嵌套
+                // Process baseurl nesting
                 segBaseUrl = ExtendBaseUrl(period, segBaseUrl);
 
                 string adaptationSetsBaseUrl = segBaseUrl;
 
-                // 本Period中的全部AdaptationSet
+                // All AdaptationSets in this Period
                 IEnumerable<XElement> adaptationSets = period.Elements().Where(e => e.Name.LocalName == "AdaptationSet");
                 foreach (XElement? adaptationSet in adaptationSets)
                 {
-                    // 处理baseurl嵌套
+                    // Process baseurl nesting
                     segBaseUrl = ExtendBaseUrl(adaptationSet, segBaseUrl);
 
                     string representationsBaseUrl = segBaseUrl;
 
                     string? mimeType = adaptationSet.Attribute("contentType")?.Value ?? adaptationSet.Attribute("mimeType")?.Value;
                     double? frameRate = GetFrameRate(adaptationSet);
-                    // 本AdaptationSet中的全部Representation
+                    // All Representations in this AdaptationSet
                     IEnumerable<XElement> representations = adaptationSet.Elements().Where(e => e.Name.LocalName == "Representation");
                     foreach (XElement? representation in representations)
                     {
-                        // 处理baseurl嵌套
+                        // Process baseurl nesting
                         segBaseUrl = ExtendBaseUrl(representation, segBaseUrl);
 
                         mimeType ??= representation.Attribute("contentType")?.Value ?? representation.Attribute("mimeType")?.Value ?? "";
@@ -165,24 +165,24 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             "audio" => MediaType.AUDIO,
                             _ => null
                         };
-                        // 特殊处理
+                        // Special handling
                         if (representation.Attribute("volumeAdjust") != null)
                         {
                             streamSpec.GroupId += "-" + representation.Attribute("volumeAdjust")?.Value;
                         }
-                        // 推测后缀名
+                        // Guess suffix
                         string? mType = representation.Attribute("mimeType")?.Value ?? adaptationSet.Attribute("mimeType")?.Value;
                         if (mType != null)
                         {
                             string[] mTypeSplit = mType.Split('/');
                             streamSpec.Extension = mTypeSplit.Length == 2 ? mTypeSplit[1] : null;
                         }
-                        // 优化字幕场景识别
+                        // Optimize subtitle scene recognition
                         if (streamSpec.Codecs is "stpp" or "wvtt")
                         {
                             streamSpec.MediaType = MediaType.SUBTITLES;
                         }
-                        // 优化字幕场景识别
+                        // Optimize subtitle scene recognition
                         XElement? role = representation.Elements().FirstOrDefault(e => e.Name.LocalName == "Role") ?? adaptationSet.Elements().FirstOrDefault(e => e.Name.LocalName == "Role");
                         if (role != null)
                         {
@@ -219,31 +219,31 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             }
                         }
                         streamSpec.Playlist.IsLive = isLive;
-                        // 设置刷新间隔 timeShiftBufferDepth / 2
+                        // Set refresh interval timeShiftBufferDepth / 2
                         if (timeShiftBufferDepth != null)
                         {
                             streamSpec.Playlist.RefreshIntervalMs = XmlConvert.ToTimeSpan(timeShiftBufferDepth).TotalMilliseconds / 2;
                         }
 
-                        // 读取声道数量
+                        // Read the number of channels
                         XElement? audioChannelConfiguration = adaptationSet.Elements().Concat(representation.Elements()).FirstOrDefault(e => e.Name.LocalName == "AudioChannelConfiguration");
                         if (audioChannelConfiguration != null)
                         {
                             streamSpec.Channels = audioChannelConfiguration.Attribute("value")?.Value;
                         }
 
-                        // 发布时间
+                        // Publication time
                         if (!string.IsNullOrEmpty(publishTime))
                         {
                             streamSpec.PublishTime = DateTime.Parse(publishTime, CultureInfo.InvariantCulture);
                         }
 
 
-                        // 第一种形式 SegmentBase
+                        // First form SegmentBase
                         XElement? segmentBaseElement = representation.Elements().FirstOrDefault(e => e.Name.LocalName == "SegmentBase");
                         if (segmentBaseElement != null)
                         {
-                            // 处理init url
+                            // Process init url
                             XElement? initialization = segmentBaseElement.Elements().FirstOrDefault(e => e.Name.LocalName == "Initialization");
                             if (initialization != null)
                             {
@@ -266,7 +266,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                     string? initRange = initialization.Attribute("range")?.Value;
                                     streamSpec.Playlist.MediaInit = new MediaSegment
                                     {
-                                        Index = -1, // 便于排序
+                                        Index = -1, // For sorting
                                         Url = initUrl
                                     };
                                     if (initRange != null)
@@ -279,12 +279,12 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             }
                         }
 
-                        // 第二种形式 SegmentList.SegmentList
+                        // Second form SegmentList.SegmentList
                         XElement? segmentList = representation.Elements().FirstOrDefault(e => e.Name.LocalName == "SegmentList");
                         if (segmentList != null)
                         {
                             string? durationStr = segmentList.Attribute("duration")?.Value;
-                            // 处理init url
+                            // Process init url
                             XElement? initialization = segmentList.Elements().FirstOrDefault(e => e.Name.LocalName == "Initialization");
                             if (initialization != null)
                             {
@@ -292,7 +292,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                 string? initRange = initialization.Attribute("range")?.Value;
                                 streamSpec.Playlist.MediaInit = new MediaSegment
                                 {
-                                    Index = -1, // 便于排序
+                                    Index = -1, // For sorting
                                     Url = initUrl
                                 };
                                 if (initRange != null)
@@ -302,7 +302,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                     streamSpec.Playlist.MediaInit.ExpectLength = expect;
                                 }
                             }
-                            // 处理分片
+                            // Process segments
                             List<XElement> segmentURLs = [.. segmentList.Elements().Where(e => e.Name.LocalName == "SegmentURL")];
                             string timescaleStr = segmentList.Attribute("timescale")?.Value ?? "1";
                             for (int segmentIndex = 0; segmentIndex < segmentURLs.Count; segmentIndex++)
@@ -328,16 +328,16 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             }
                         }
 
-                        // 第三种形式 SegmentTemplate+SegmentTimeline
-                        // 通配符有$RepresentationID$ $Bandwidth$ $Number$ $Time$
+                        // Third form SegmentTemplate+SegmentTimeline
+                        // Wildcard has $RepresentationID$ $Bandwidth$ $Number$ $Time$
 
-                        // adaptationSets中的segmentTemplate
+                        // segmentTemplate in adaptationSets
                         IEnumerable<XElement> segmentTemplateElementsOuter = adaptationSet.Elements().Where(e => e.Name.LocalName == "SegmentTemplate");
-                        // representation中的segmentTemplate
+                        // segmentTemplate in representation
                         IEnumerable<XElement> segmentTemplateElements = representation.Elements().Where(e => e.Name.LocalName == "SegmentTemplate");
                         if (segmentTemplateElements.Any() || segmentTemplateElementsOuter.Any())
                         {
-                            // 优先使用最近的元素
+                            // Use the nearest element first
                             XElement segmentTemplate = (segmentTemplateElements.FirstOrDefault() ?? segmentTemplateElementsOuter.FirstOrDefault())!;
                             XElement segmentTemplateOuter = (segmentTemplateElementsOuter.FirstOrDefault() ?? segmentTemplateElements.FirstOrDefault())!;
                             Dictionary<string, object?> varDic = new()
@@ -351,7 +351,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             string timescaleStr = segmentTemplate.Attribute("timescale")?.Value ?? segmentTemplateOuter.Attribute("timescale")?.Value ?? "1";
                             string? durationStr = segmentTemplate.Attribute("duration")?.Value ?? segmentTemplateOuter.Attribute("duration")?.Value;
                             string startNumberStr = segmentTemplate.Attribute("startNumber")?.Value ?? segmentTemplateOuter.Attribute("startNumber")?.Value ?? "1";
-                            // 处理init url
+                            // Process init url
                             string? initialization = segmentTemplate.Attribute("initialization")?.Value ?? segmentTemplateOuter.Attribute("initialization")?.Value;
                             if (initialization != null)
                             {
@@ -359,23 +359,23 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                 string initUrl = ParserUtil.CombineURL(segBaseUrl, _init);
                                 streamSpec.Playlist.MediaInit = new MediaSegment
                                 {
-                                    Index = -1, // 便于排序
+                                    Index = -1, // For sorting
                                     Url = initUrl
                                 };
                             }
-                            // 处理分片
+                            // Process segments
                             string? mediaTemplate = segmentTemplate.Attribute("media")?.Value ?? segmentTemplateOuter.Attribute("media")?.Value;
                             XElement? segmentTimeline = segmentTemplate.Elements().FirstOrDefault(e => e.Name.LocalName == "SegmentTimeline");
                             if (segmentTimeline != null)
                             {
-                                // 使用了SegmentTimeline 结果精确
+                                // Using SegmentTimeline, the result is accurate
                                 long segNumber = Convert.ToInt64(startNumberStr, CultureInfo.InvariantCulture);
                                 IEnumerable<XElement> Ss = segmentTimeline.Elements().Where(e => e.Name.LocalName == "S");
                                 long currentTime = 0L;
                                 int segIndex = 0;
                                 foreach (XElement? S in Ss)
                                 {
-                                    // 每个S元素包含三个属性:@t(start time)\@r(repeat count)\@d(duration)
+                                    // Each S element contains three attributes:@t(start time)\@r(repeat count)\@d(duration)
                                     string? _startTimeStr = S.Attribute("t")?.Value;
                                     string? _durationStr = S.Attribute("d")?.Value;
                                     string? _repeatCountStr = S.Attribute("r")?.Value;
@@ -407,7 +407,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                     streamSpec.Playlist.MediaParts[0].MediaSegments.Add(mediaSegment);
                                     if (_repeatCount < 0)
                                     {
-                                        // 负数表示一直重复 直到period结束 注意减掉已经加入的1个片段
+                                        // Negative numbers mean to repeat until the period ends, note to subtract the already added 1 fragment
                                         _repeatCount = (long)Math.Ceiling(XmlConvert.ToTimeSpan(periodDuration ?? mediaPresentationDuration ?? "PT0S").TotalSeconds * timescale / _duration) - 1;
                                     }
                                     for (long i = 0; i < _repeatCount; i++)
@@ -434,22 +434,22 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             }
                             else
                             {
-                                // 没用SegmentTimeline 需要计算总分片数量 不精确
+                                // No SegmentTimeline, need to calculate the total number of segments, not accurate
                                 int timescale = Convert.ToInt32(timescaleStr, CultureInfo.InvariantCulture);
                                 long startNumber = Convert.ToInt64(startNumberStr, CultureInfo.InvariantCulture);
                                 int duration = Convert.ToInt32(durationStr, CultureInfo.InvariantCulture);
                                 long totalNumber = (long)Math.Ceiling(XmlConvert.ToTimeSpan(periodDuration ?? mediaPresentationDuration ?? "PT0S").TotalSeconds * timescale / duration);
-                                // 直播的情况，需要自己计算totalNumber
+                                // For live, need to calculate totalNumber
                                 if (totalNumber == 0 && isLive)
                                 {
                                     DateTime now = DateTime.Now;
                                     DateTime availableTime = DateTime.Parse(availabilityStartTime!, CultureInfo.InvariantCulture);
-                                    // 可用时间+偏移量
+                                    // Available time + offset
                                     TimeSpan offsetMs = TimeSpan.FromMilliseconds(Convert.ToInt64(presentationTimeOffsetStr, CultureInfo.InvariantCulture) / 1000);
                                     availableTime = availableTime.Add(offsetMs);
                                     TimeSpan ts = now - availableTime;
                                     TimeSpan updateTs = XmlConvert.ToTimeSpan(timeShiftBufferDepth!);
-                                    // (当前时间到发布时间的时间差 - 最小刷新间隔) / 分片时长
+                                    // (Current time to publish time - minimum refresh interval) / segment duration
                                     startNumber += (long)((ts.TotalSeconds - updateTs.TotalSeconds) * timescale / duration);
                                     totalNumber = (long)(updateTs.TotalSeconds * timescale / duration);
                                 }
@@ -468,14 +468,14 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                                         mediaSegment.NameFromVar = index.ToString(CultureInfo.InvariantCulture);
                                     }
 
-                                    mediaSegment.Index = isLive ? index : segIndex; // 直播直接用startNumber
+                                    mediaSegment.Index = isLive ? index : segIndex; // Live use startNumber directly
                                     mediaSegment.Duration = duration / (double)timescale;
                                     streamSpec.Playlist.MediaParts[0].MediaSegments.Add(mediaSegment);
                                 }
                             }
                         }
 
-                        // 如果依旧没被添加分片，直接把BaseUrl塞进去就好
+                        // If no segments are added, just put the BaseUrl in
                         if (streamSpec.Playlist.MediaParts[0].MediaSegments.Count == 0)
                         {
                             streamSpec.Playlist.MediaParts[0].MediaSegments.Add
@@ -489,7 +489,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             );
                         }
 
-                        // 判断加密情况
+                        // Check encryption
                         if (adaptationSet.Elements().Concat(representation.Elements()).Any(e => e.Name.LocalName == "ContentProtection"))
                         {
                             if (streamSpec.Playlist.MediaInit != null)
@@ -502,17 +502,17 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             }
                         }
 
-                        // 处理同一ID分散在不同Period的情况
+                        // Process the case where the same ID is scattered in different Periods
                         int _index = streamList.FindIndex(_f => _f.PeriodId != streamSpec.PeriodId && _f.GroupId == streamSpec.GroupId && _f.Resolution == streamSpec.Resolution && _f.MediaType == streamSpec.MediaType);
                         if (_index > -1)
                         {
                             if (isLive)
                             {
-                                // 直播，这种情况直接略过新的
+                                // Live, this case is skipped directly
                             }
                             else
                             {
-                                // 点播，这种情况如果URL不同则作为新的part出现，否则仅把时间加起来
+                                // Point-to-view, this case appears as a new part if the URL is different, otherwise only the time is added
                                 string url1 = streamList[_index].Playlist!.MediaParts.Last().MediaSegments.Last().Url;
                                 string? url2 = streamSpec.Playlist.MediaParts[0].MediaSegments.LastOrDefault()?.Url;
                                 if (url1 != url2)
@@ -536,27 +536,27 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         }
                         else
                         {
-                            // 修复mp4类型字幕
+                            // Fix mp4 type subtitles
                             if (streamSpec is { MediaType: MediaType.SUBTITLES, Extension: "mp4" })
                             {
                                 streamSpec.Extension = "m4s";
                             }
-                            // 分片默认后缀m4s
+                            // Segment default suffix m4s
                             if (streamSpec.MediaType != MediaType.SUBTITLES && (streamSpec.Extension == null || streamSpec.Playlist.MediaParts.Sum(x => x.MediaSegments.Count) > 1))
                             {
                                 streamSpec.Extension = "m4s";
                             }
                             streamList.Add(streamSpec);
                         }
-                        // 恢复BaseURL相对位置
+                        // Restore BaseURL relative position
                         segBaseUrl = representationsBaseUrl;
                     }
-                    // 恢复BaseURL相对位置
+                    // Restore BaseURL relative position
                     segBaseUrl = adaptationSetsBaseUrl;
                 }
             }
 
-            // 为视频设置默认轨道
+            // Set default track for video
             List<StreamSpec> aL = [.. streamList.Where(s => s.MediaType == MediaType.AUDIO)];
             List<StreamSpec> sL = [.. streamList.Where(s => s.MediaType == MediaType.SUBTITLES)];
             foreach (StreamSpec? item in streamList.Where(item => !string.IsNullOrEmpty(item.Resolution)))
@@ -575,7 +575,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
         }
 
         /// <summary>
-        /// 如果有非法字符 返回und
+        /// If there are illegal characters, return und
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
@@ -598,7 +598,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             }
             catch (HttpRequestException) when (ParserConfig.Url != ParserConfig.OriginalUrl)
             {
-                // 当URL无法访问时，再请求原始URL
+                // When the URL cannot be accessed, request the original URL again
                 (rawText, url) = await HTTPUtil.GetWebSourceAndNewUrlAsync(ParserConfig.OriginalUrl, ParserConfig.Headers);
             }
 
@@ -608,8 +608,8 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             List<StreamSpec> newStreams = await ExtractStreamsAsync(rawText);
             foreach (StreamSpec streamSpec in streamSpecs)
             {
-                // 有的网站每次请求MPD返回的码率不一致，导致ToShortString()无法匹配 无法更新playlist
-                // 故增加通过init url来匹配 (如果有的话)
+                // Some websites return inconsistent bit rates each time MPD is requested, causing ToShortString() to not match and the playlist to not be updated
+                // Therefore, add matching through init url (if there is one)
                 IEnumerable<StreamSpec> match = newStreams.Where(n => n.ToShortString() == streamSpec.ToShortString());
                 if (!match.Any())
                 {
@@ -618,10 +618,10 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
                 if (match.Any())
                 {
-                    streamSpec.Playlist!.MediaParts = match.First().Playlist!.MediaParts; // 不更新init
+                    streamSpec.Playlist!.MediaParts = match.First().Playlist!.MediaParts; // Do not update init
                 }
             }
-            // 这里才调用URL预处理器，节省开销
+            // Here the URL pre-processor is called, saving overhead
             await ProcessUrlAsync(streamSpecs);
         }
 
@@ -654,7 +654,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
         public async Task FetchPlayListAsync(List<StreamSpec> streamSpecs)
         {
-            // 这里才调用URL预处理器，节省开销
+            // Here the URL pre-processor is called, saving overhead
             await ProcessUrlAsync(streamSpecs);
         }
 

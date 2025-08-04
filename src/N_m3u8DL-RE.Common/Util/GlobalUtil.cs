@@ -54,7 +54,11 @@ namespace N_m3u8DL_RE.Common.Util
             };
         }
 
-        // 此函数用于格式化输出时长  
+        /// <summary>
+        /// Format output duration
+        /// </summary>
+        /// <param name="time"></param>
+        /// <returns></returns>
         public static string FormatTime(int time)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(time);
@@ -65,7 +69,7 @@ namespace N_m3u8DL_RE.Common.Util
         }
 
         /// <summary>
-        /// 寻找可执行程序
+        /// Find executable program
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>

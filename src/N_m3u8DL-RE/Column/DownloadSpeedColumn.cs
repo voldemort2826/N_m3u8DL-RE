@@ -24,17 +24,17 @@ namespace N_m3u8DL_RE.Column
             SpeedContainer speedContainer = SpeedContainerDic[taskId];
             string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
             bool flag = task.IsFinished || !task.IsStarted;
-            // 单文件下载汇报进度
+            // Single file download progress report
             if (!flag && speedContainer is { SingleSegment: true, ResponseLength: not null })
             {
                 task.MaxValue = (double)speedContainer.ResponseLength;
                 task.Value = speedContainer.RDownloaded;
             }
-            // 一秒汇报一次即可
+            // Report once per second
             if (DateTimeStringDic.TryGetValue(taskId, out string? oldTime) && oldTime != now && !flag)
             {
                 speedContainer.NowSpeed = speedContainer.Downloaded;
-                // 速度为0，计数增加
+                // If the speed is 0, increase the count
                 _ = speedContainer.Downloaded <= 0 ? speedContainer.AddLowSpeedCount() : speedContainer.ResetLowSpeedCount();
 
                 speedContainer.Reset();

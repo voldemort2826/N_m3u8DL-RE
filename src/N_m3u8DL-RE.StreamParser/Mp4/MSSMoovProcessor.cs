@@ -84,13 +84,13 @@ namespace N_m3u8DL_RE.StreamParser.Mp4
             ProtectionData = data.ProtectionData;
             ProtectionSystemId = data.ProtectionSystemID;
 
-            // 需要手动生成CodecPrivateData
+            // Need to manually generate CodecPrivateData
             if (string.IsNullOrEmpty(CodecPrivateData))
             {
                 GenCodecPrivateDataForAAC();
             }
 
-            // 解析KID
+            // Parse KID
             if (IsProtection)
             {
                 ExtractKID();
@@ -581,7 +581,7 @@ namespace N_m3u8DL_RE.StreamParser.Mp4
                     }
                     return Box("hvc1", stream.ToArray()); // HEVC Simple Entry
                 }
-                // 杜比视界也按照hevc处理
+                // Dolby Vision is also processed as hevc
                 if (FourCC is "DVHE" or "DVH1")
                 {
                     string[] arr = CodecPrivateData.Split([StartCode], StringSplitOptions.RemoveEmptyEntries);
@@ -648,14 +648,14 @@ namespace N_m3u8DL_RE.StreamParser.Mp4
             // from sps
             List<byte> encList = [];
             /**
-             * 处理payload, 有00 00 03 0,1,2,3的情况 统一换成00 00 XX 即丢弃03
-             * 注意：此处采用的逻辑是直接简单粗暴地判断列表末尾3字节，如果是0x000003就删掉最后的0x03，可能会导致以下情况
-             * 00 00 03 03 03 03 03 01 会被直接处理成 => 00 00 01
-             * 此处经过测试只有直接跳过才正常，如果处理成 00 00 03 03 03 03 01 是有问题的
+             * Process payload, there are cases of 00 00 03 0,1,2,3, which are uniformly replaced with 00 00 XX, that is, 03 is discarded
+             * Note: The logic used here is to directly and simply judge the last 3 bytes of the list, if it is 0x000003, the last 0x03 is deleted, which may cause the following situation
+             * 00 00 03 03 03 03 03 01 is directly processed as => 00 00 01
+             * Here, only direct skipping is normal, if it is processed as 00 00 03 03 03 03 01, there is a problem
              *
-             * 测试的数据如下：
-             *   原始：42 01 01 01 60 00 00 03 00 90 00 00 03 00 00 03 00 96 a0 01 e0 20 06 61 65 95 9a 49 30 bf fc 0c 7c 0c 81 a8 08 08 08 20 00 00 03 00 20 00 00 03 03 01
-             * 处理后：42 01 01 01 60 00 00 00 90 00 00 00 00 00 96 A0 01 E0 20 06 61 65 95 9A 49 30 BF FC 0C 7C 0C 81 A8 08 08 08 20 00 00 00 20 00 00 01
+             * The test data is as follows:
+             *   Original: 42 01 01 01 60 00 00 03 00 90 00 00 03 00 00 03 00 96 a0 01 e0 20 06 61 65 95 9a 49 30 bf fc 0c 7c 0c 81 a8 08 08 08 20 00 00 03 00 20 00 00 03 03 01
+             *   Processed: 42 01 01 01 60 00 00 00 90 00 00 00 00 00 96 A0 01 E0 20 06 61 65 95 9A 49 30 BF FC 0C 7C 0C 81 A8 08 08 08 20 00 00 00 20 00 00 01
              */
             using (BinaryReader _reader = new(new MemoryStream(sps)))
             {
@@ -699,7 +699,7 @@ namespace N_m3u8DL_RE.StreamParser.Mp4
                 skipBit += 2; // sub_layer_profile_present_flag sub_layer_level_present_flag
             }*/
 
-            // 生成编码信息
+            // Generate encoding information
             string codecs = code +
                          $".{HEVC_GENERAL_PROFILE_SPACE_STRINGS[generalProfileSpace]}{generalProfileIdc}" +
                          $".{Convert.ToString(generalProfileCompatibilityFlags, 16)}" +

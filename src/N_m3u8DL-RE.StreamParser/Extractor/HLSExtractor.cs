@@ -35,7 +35,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
         }
 
         /// <summary>
-        /// 预处理m3u8内容
+        /// Pre-process m3u8 content
         /// </summary>
         public void PreProcessContent()
         {
@@ -55,7 +55,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
         }
 
         /// <summary>
-        /// 预处理URL
+        /// Pre-process URL
         /// </summary>
         public string PreProcessUrl(string url)
         {
@@ -129,7 +129,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         streamSpec.VideoRange = videoRange;
                     }
 
-                    // 清除多余的编码信息 dvh1.05.06,ec-3 => dvh1.05.06
+                    // Remove extra encoding information dvh1.05.06,ec-3 => dvh1.05.06
                     if (!string.IsNullOrEmpty(streamSpec.Codecs) && !string.IsNullOrEmpty(streamSpec.AudioId))
                     {
                         streamSpec.Codecs = streamSpec.Codecs.Split(',')[0];
@@ -146,7 +146,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         streamSpec.MediaType = mediaType;
                     }
 
-                    // 跳过CLOSED_CAPTIONS类型（目前不支持）
+                    // Skip CLOSED_CAPTIONS type (currently not supported)
                     if (streamSpec.MediaType == MediaType.CLOSEDCAPTIONS)
                     {
                         continue;
@@ -165,7 +165,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                           is present in every video Rendition specified by the EXT-X-STREAM-INF
                           tag.
 
-                          此处直接忽略URI属性为空的情况
+                          Here, the case where the URI attribute is empty is directly ignored
                      */
                     if (string.IsNullOrEmpty(url))
                     {
@@ -228,7 +228,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
 
         private Task<Playlist> ParseListAsync()
         {
-            // 标记是否已清除广告分片
+            // Mark whether the ad segment has been cleared
             bool hasAd = false;
             ;
             bool allowHlsMultiExtMap = ParserConfig.CustomParserArgs.TryGetValue("AllowHlsMultiExtMap", out string? allMultiExtMap) && allMultiExtMap == "true";
@@ -248,7 +248,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             Playlist playlist = new();
             List<MediaPart> mediaParts = [];
 
-            // 当前的加密信息
+            // Current encryption information
             EncryptInfo currentEncryptInfo = new();
             if (ParserConfig.CustomMethod != null)
             {
@@ -264,7 +264,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             {
                 currentEncryptInfo.IV = ParserConfig.CustomeIV;
             }
-            // 上次读取到的加密行，#EXT-X-KEY:……
+            // The last encrypted line read, #EXT-X-KEY:……
             string lastKeyLine = "";
 
             MediaPart mediaPart = new();
@@ -279,7 +279,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                     continue;
                 }
 
-                // 只下载部分字节
+                // Download only part of the bytes
                 if (line.StartsWith(HLSTags.ext_x_byterange, StringComparison.OrdinalIgnoreCase))
                 {
                     string p = ParserUtil.GetAttribute(line);
@@ -292,7 +292,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 {
                     isEndlist = line.Trim().EndsWith("VOD", StringComparison.OrdinalIgnoreCase);
                 }
-                // 国家地理去广告
+                // National Geographic remove ads
                 else if (line.StartsWith("#UPLYNK-SEGMENT", StringComparison.OrdinalIgnoreCase))
                 {
                     if (line.Contains(",ad"))
@@ -304,17 +304,17 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         isAd = false;
                     }
                 }
-                // 国家地理去广告
+                // National Geographic remove ads
                 else if (isAd)
                 {
                     continue;
                 }
-                // 解析定义的分段长度
+                // Parse the defined segment length
                 else if (line.StartsWith(HLSTags.ext_x_targetduration, StringComparison.OrdinalIgnoreCase))
                 {
                     playlist.TargetDuration = Convert.ToDouble(ParserUtil.GetAttribute(line), CultureInfo.InvariantCulture);
                 }
-                // 解析起始编号
+                // Parse the starting number
                 else if (line.StartsWith(HLSTags.ext_x_media_sequence, StringComparison.OrdinalIgnoreCase))
                 {
                     segIndex = Convert.ToInt64(ParserUtil.GetAttribute(line), CultureInfo.InvariantCulture);
@@ -325,10 +325,10 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 {
                     segment.DateTime = DateTime.Parse(ParserUtil.GetAttribute(line), CultureInfo.InvariantCulture);
                 }
-                // 解析不连续标记，需要单独合并（timestamp不同）
+                // Parse the discontinuity mark, which needs to be merged separately (timestamp different)
                 else if (line.StartsWith(HLSTags.ext_x_discontinuity, StringComparison.OrdinalIgnoreCase))
                 {
-                    // 修复YK去除广告后的遗留问题
+                    // Fix the problem left after YK removing ads
                     if (hasAd && mediaParts.Count > 0)
                     {
                         segments = mediaParts[^1].MediaSegments;
@@ -336,7 +336,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         hasAd = false;
                         continue;
                     }
-                    // 常规情况的#EXT-X-DISCONTINUITY标记，新建part
+                    // #EXT-X-DISCONTINUITY mark in normal case, new part
                     if (hasAd || segments.Count < 1)
                     {
                         continue;
@@ -348,16 +348,16 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                     });
                     segments = [];
                 }
-                // 解析KEY
+                // Parse KEY
                 else if (line.StartsWith(HLSTags.ext_x_key, StringComparison.OrdinalIgnoreCase))
                 {
                     string uri = ParserUtil.GetAttribute(line, "URI");
                     string uri_last = ParserUtil.GetAttribute(lastKeyLine, "URI");
 
-                    // 如果KEY URL相同，不进行重复解析
+                    // If the KEY URL is the same, do not parse it again
                     if (uri != uri_last)
                     {
-                        // 调用处理器进行解析
+                        // Call the processor to parse
                         EncryptInfo parsedInfo = ParseKey(line);
                         currentEncryptInfo.Method = parsedInfo.Method;
                         currentEncryptInfo.Key = parsedInfo.Key;
@@ -365,13 +365,13 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                     }
                     lastKeyLine = line;
                 }
-                // 解析分片时长
+                // Parse the segment duration
                 else if (line.StartsWith(HLSTags.extinf, StringComparison.OrdinalIgnoreCase))
                 {
                     string[] tmp = ParserUtil.GetAttribute(line).Split(',');
                     segment.Duration = Convert.ToDouble(tmp[0], CultureInfo.InvariantCulture);
                     segment.Index = segIndex;
-                    // 是否有加密，有的话写入KEY和IV
+                    // Whether there is encryption, if there is, write KEY and IV
                     if (currentEncryptInfo.Method != EncryptMethod.NONE)
                     {
                         segment.EncryptInfo.Method = currentEncryptInfo.Method;
@@ -381,7 +381,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                     expectSegment = true;
                     segIndex++;
                 }
-                // m3u8主体结束
+                // m3u8 main body ends
                 else if (line.StartsWith(HLSTags.ext_x_endlist, StringComparison.OrdinalIgnoreCase))
                 {
                     if (segments.Count > 0)
@@ -402,7 +402,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         playlist.MediaInit = new MediaSegment()
                         {
                             Url = PreProcessUrl(ParserUtil.CombineURL(BaseUrl, ParserUtil.GetAttribute(line, "URI"))),
-                            Index = -1, // 便于排序
+                            Index = -1, // For sorting
                         };
                         if (line.Contains("BYTERANGE"))
                         {
@@ -415,12 +415,12 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         {
                             continue;
                         }
-                        // 有加密的话写入KEY和IV
+                        // If there is encryption, write KEY and IV
                         playlist.MediaInit.EncryptInfo.Method = currentEncryptInfo.Method;
                         playlist.MediaInit.EncryptInfo.Key = currentEncryptInfo.Key;
                         playlist.MediaInit.EncryptInfo.IV = currentEncryptInfo.IV ?? HexUtil.HexToBytes(Convert.ToString(segIndex, 16).PadLeft(32, '0'));
                     }
-                    // 遇到了其他的map，说明已经不是一个视频了，全部丢弃即可
+                    // If other maps are encountered, it means that it is not a video, all can be discarded
                     else
                     {
                         if (segments.Count > 0)
@@ -438,33 +438,33 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                         }
                     }
                 }
-                // 评论行不解析
+                // Comment line not parsed
                 else if (line.StartsWith('#'))
                 {
                     continue;
                 }
-                // 空白行不解析
+                // Blank line not parsed
                 else if (line.StartsWith("\r\n", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                // 解析分片的地址
+                // Parse the segment address
                 else if (expectSegment)
                 {
                     string segUrl = PreProcessUrl(ParserUtil.CombineURL(BaseUrl, line));
                     segment.Url = segUrl;
                     segments.Add(segment);
                     segment = new();
-                    // YK的广告分段则清除此分片
-                    // 需要注意，遇到广告说明程序对上文的#EXT-X-DISCONTINUITY做出的动作是不必要的，
-                    // 其实上下文是同一种编码，需要恢复到原先的part上
+                    // YK's ad segment clears this segment
+                    // Note that the action of #EXT-X-DISCONTINUITY in the above text is unnecessary,
+                    // The actual context is the same code, and the part needs to be restored
                     if (segUrl.Contains("ccode=") && segUrl.Contains("/ad/") && segUrl.Contains("duration="))
                     {
                         segments.RemoveAt(segments.Count - 1);
                         segIndex--;
                         hasAd = true;
                     }
-                    // YK广告(4K分辨率测试)
+                    // YK ad (4K resolution test)
                     if (segUrl.Contains("ccode=0902") && segUrl.Contains("duration="))
                     {
                         segments.RemoveAt(segments.Count - 1);
@@ -475,7 +475,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 }
             }
 
-            // 直播的情况，无法遇到m3u8结束标记，需要手动将segments加入parts
+            // In the case of live broadcast, the m3u8 end mark cannot be encountered, and segments need to be manually added to parts
             if (!isEndlist)
             {
                 mediaParts.Add(new MediaPart()
@@ -487,10 +487,10 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             playlist.MediaParts = mediaParts;
             playlist.IsLive = !isEndlist;
 
-            // 直播刷新间隔
+            // Live refresh interval
             if (playlist.IsLive)
             {
-                // 由于播放器默认从最后3个分片开始播放 此处设置刷新间隔为TargetDuration的2倍
+                // Since the player defaults to playing from the last 3 segments, the refresh interval is set to 2 times the TargetDuration here
                 playlist.RefreshIntervalMs = (int)((playlist.TargetDuration ?? 5) * 2 * 1000);
             }
 
@@ -503,7 +503,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             {
                 if (p.CanProcess(ExtractorType, keyLine, M3u8Url, M3u8Content, ParserConfig))
                 {
-                    // 匹配到对应处理器后不再继续
+                    // After matching the corresponding processor, no longer continue
                     return p.Process(keyLine, M3u8Url, M3u8Content, ParserConfig);
                 }
             }
@@ -551,7 +551,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 }
                 catch (HttpRequestException) when (url != ParserConfig.OriginalUrl)
                 {
-                    // 当URL无法访问时，再请求原始URL
+                    // When the URL cannot be accessed, request the original URL again
                     (M3u8Content, url) = await HTTPUtil.GetWebSourceAndNewUrlAsync(ParserConfig.OriginalUrl, ParserConfig.Headers);
                 }
             }
@@ -562,13 +562,13 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
         }
 
         /// <summary>
-        /// 从Master链接中刷新各个流的URL
+        /// Refresh the URL of each stream from the Master link
         /// </summary>
         /// <param name="lists"></param>
         /// <returns></returns>
         private async Task RefreshUrlFromMaster(List<StreamSpec> lists)
         {
-            // 重新加载master m3u8, 刷新选中流的URL
+            // Reload master m3u8, refresh the URL of the selected stream
             await LoadM3u8FromUrlAsync(ParserConfig.Url);
             List<StreamSpec> newStreams = await ParseMasterListAsync();
             newStreams = [.. newStreams.DistinctBy(p => p.Url)];
@@ -591,13 +591,13 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
             {
                 try
                 {
-                    // 直接重新加载m3u8
+                    // Directly reload m3u8
                     await LoadM3u8FromUrlAsync(lists[i].Url!);
                 }
                 catch (HttpRequestException) when (MasterM3u8Flag)
                 {
                     Logger.WarnMarkUp("Can not load m3u8. Try refreshing url from master url...");
-                    // 当前URL无法加载 尝试从Master链接中刷新URL
+                    // The current URL cannot be loaded, try to refresh the URL from the Master link
                     await RefreshUrlFromMaster(lists);
                     await LoadM3u8FromUrlAsync(lists[i].Url!);
                 }
@@ -605,7 +605,7 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                 Playlist newPlaylist = await ParseListAsync();
                 if (lists[i].Playlist?.MediaInit != null)
                 {
-                    lists[i].Playlist!.MediaParts = newPlaylist.MediaParts; // 不更新init
+                    lists[i].Playlist!.MediaParts = newPlaylist.MediaParts; // Do not update init
                 }
                 else
                 {

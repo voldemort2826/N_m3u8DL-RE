@@ -12,21 +12,21 @@ namespace N_m3u8DL_RE.Common.Log
         private static partial Regex VarsRepRegex();
 
         /// <summary>
-        /// 日志级别，默认为INFO
+        /// Log level, default is INFO
         /// </summary>
         public static LogLevel LogLevel { get; set; } = LogLevel.INFO;
 
         /// <summary>
-        /// 是否写出日志文件
+        /// Whether to write log file
         /// </summary>
         public static bool IsWriteFile { get; set; } = true;
 
         /// <summary>
-        /// 本次运行日志文件所在位置
+        /// Location of the log file for this run
         /// </summary>
         public static string? LogFilePath { get; set; }
 
-        // 读写锁
+        // Read-write lock
         private static readonly ReaderWriterLockSlim LogWriteLock = new();
 
         public static void InitLogFile()
@@ -50,7 +50,7 @@ namespace N_m3u8DL_RE.Common.Log
                     LogFilePath = Path.Combine(logDir, now.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".log");
                     int index = 1;
                     string fileName = Path.GetFileNameWithoutExtension(LogFilePath);
-                    // 若文件存在则加序号
+                    // If the file exists, add a number
                     while (File.Exists(LogFilePath))
                     {
                         LogFilePath = Path.Combine(Path.GetDirectoryName(LogFilePath)!, $"{fileName}-{index++}.log");
@@ -97,14 +97,14 @@ namespace N_m3u8DL_RE.Common.Log
                 string plain = write.RemoveMarkup() + subWrite.RemoveMarkup();
                 try
                 {
-                    // 进入写入
+                    // Enter write
                     LogWriteLock.EnterWriteLock();
                     using StreamWriter sw = File.AppendText(LogFilePath);
                     sw.WriteLine(plain);
                 }
                 finally
                 {
-                    // 释放占用
+                    // Release occupied
                     LogWriteLock.ExitWriteLock();
                 }
             }
@@ -247,14 +247,14 @@ namespace N_m3u8DL_RE.Common.Log
             string plain = GetCurrTime() + " " + "EXTRA: " + data.RemoveMarkup();
             try
             {
-                // 进入写入
+                // Enter write
                 LogWriteLock.EnterWriteLock();
                 using StreamWriter sw = File.AppendText(LogFilePath);
                 sw.WriteLine(plain, Encoding.UTF8);
             }
             finally
             {
-                // 释放占用
+                // Release occupied
                 LogWriteLock.ExitWriteLock();
             }
         }

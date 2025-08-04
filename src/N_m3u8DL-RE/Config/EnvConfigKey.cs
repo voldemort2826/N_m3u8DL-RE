@@ -1,22 +1,22 @@
 namespace N_m3u8DL_RE.Config
 {
     /// <summary>
-    /// 通过配置环境变量来实现更细节地控制某些逻辑
+    /// Control some logic through environment variables
     /// </summary>
     public static class EnvConfigKey
     {
         /// <summary>
-        /// 当此值为1时, 在图形字幕处理逻辑中PNG生成后不再删除m4s文件
+        /// When this value is 1, the m4s file is not deleted after the PNG is generated in the graphic subtitle processing logic
         /// </summary>
         public const string ReKeepImageSegments = "RE_KEEP_IMAGE_SEGMENTS";
 
         /// <summary>
-        /// 控制启用PipeMux时, 具体ffmpeg命令行
+        /// Control the specific ffmpeg command line when PipeMux is enabled
         /// </summary>
         public const string ReLivePipeOptions = "RE_LIVE_PIPE_OPTIONS";
 
         /// <summary>
-        /// 控制启用PipeMux时, 非Windows环境下命名管道文件的生成目录
+        /// Control the generation directory of named pipes in non-Windows environments when PipeMux is enabled
         /// </summary>
         public const string ReLivePipeTmpDir = "RE_LIVE_PIPE_TMP_DIR";
     }

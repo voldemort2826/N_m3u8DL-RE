@@ -496,8 +496,8 @@ sr;srp
         }
 
         /// <summary>
-        /// 转换 ISO 639-1 => ISO 639-2
-        /// 且当Description为空时将DisplayName写入
+        /// Convert ISO 639-1 => ISO 639-2
+        /// When Description is empty, write DisplayName
         /// </summary>
         /// <param name="outputFile"></param>
         public static void ConvertLangCodeAndDisplayName(OutputFile outputFile)
@@ -509,12 +509,12 @@ sr;srp
 
             string originalLangCode = outputFile.LangCode;
 
-            // 先直接查找
+            // First look up directly
             Language? lang = ALL_LANGS.FirstOrDefault(a => a.ExtendCode.Equals(outputFile.LangCode, StringComparison.OrdinalIgnoreCase) || a.Code.Equals(outputFile.LangCode, StringComparison.OrdinalIgnoreCase));
-            // 处理特殊的扩展语言标记
+            // Handle special extended language markers
             if (lang == null)
             {
-                // 2位转3位
+                // 2 to 3
                 string l = ConvertTwoToThree(outputFile.LangCode.Split('-').First());
                 lang = ALL_LANGS.FirstOrDefault(a => a.ExtendCode.Equals(l, StringComparison.OrdinalIgnoreCase) || a.Code.Equals(l, StringComparison.OrdinalIgnoreCase));
             }
@@ -529,10 +529,10 @@ sr;srp
             }
             else
             {
-                outputFile.LangCode = "und"; // 无法识别直接置为und
+                outputFile.LangCode = "und"; // If it cannot be recognized, set it to und
             }
 
-            // 无描述，则把LangCode当作描述
+            // If there is no description, use LangCode as description
             if (string.IsNullOrEmpty(outputFile.Description))
             {
                 outputFile.Description = originalLangCode;

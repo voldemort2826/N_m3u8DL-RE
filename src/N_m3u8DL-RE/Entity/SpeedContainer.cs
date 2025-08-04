@@ -3,8 +3,8 @@
     internal sealed class SpeedContainer
     {
         public bool SingleSegment { get; set; }
-        public long NowSpeed { get; set; }  // 当前每秒速度
-        public long SpeedLimit { get; set; } = long.MaxValue; // 限速设置
+        public long NowSpeed { get; set; }  // Current speed per second
+        public long SpeedLimit { get; set; } = long.MaxValue; // Speed limit setting
         public long? ResponseLength { get; set; }
         public long RDownloaded => _Rdownloaded;
         private int _zeroSpeedCount;

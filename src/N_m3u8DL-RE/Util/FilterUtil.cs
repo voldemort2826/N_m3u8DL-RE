@@ -146,11 +146,11 @@ namespace N_m3u8DL_RE.Util
                 return [.. streamSpecs];
             }
 
-            // 基本流
+            // Basic streams
             List<StreamSpec> basicStreams = [.. streamSpecs.Where(x => x.MediaType == null)];
-            // 可选音频轨道
+            // Optional audio tracks
             List<StreamSpec> audios = [.. streamSpecs.Where(x => x.MediaType == MediaType.AUDIO)];
-            // 可选字幕轨道
+            // Optional subtitle tracks
             List<StreamSpec> subs = [.. streamSpecs.Where(x => x.MediaType == MediaType.SUBTITLES)];
 
             MultiSelectionPrompt<StreamSpec> prompt = new MultiSelectionPrompt<StreamSpec>()
@@ -165,7 +165,7 @@ namespace N_m3u8DL_RE.Util
                     .InstructionsText(ResString.PromptInfo)
                 ;
 
-            // 默认选中第一个
+            // Default selection
             StreamSpec first = streamSpecs.First();
             _ = prompt.Select(first);
 
@@ -177,7 +177,7 @@ namespace N_m3u8DL_RE.Util
             if (audios.Count != 0)
             {
                 _ = prompt.AddChoiceGroup(new StreamSpec() { Name = "__Audio" }, audios);
-                // 默认音轨
+                // Default audio track
                 if (first.AudioId != null)
                 {
                     _ = prompt.Select(audios.First(a => a.GroupId == first.AudioId));
@@ -186,30 +186,30 @@ namespace N_m3u8DL_RE.Util
             if (subs.Count != 0)
             {
                 _ = prompt.AddChoiceGroup(new StreamSpec() { Name = "__Subtitle" }, subs);
-                // 默认字幕轨
+                // Default subtitle track
                 if (first.SubtitleId != null)
                 {
                     _ = prompt.Select(subs.First(s => s.GroupId == first.SubtitleId));
                 }
             }
 
-            // 如果此时还是没有选中任何流，自动选择一个
+            // If no stream is selected at this time, select one automatically
             _ = prompt.Select(basicStreams.Concat(audios).Concat(subs).First());
 
-            // 多选
+            // Multiple selection
             List<StreamSpec> selectedStreams = CustomAnsiConsole.Console.Prompt(prompt);
 
             return selectedStreams;
         }
 
         /// <summary>
-        /// 直播使用。对齐各个轨道的起始。
+        /// Used for live streaming. Align the start of each track.
         /// </summary>
         /// <param name="selectedSteams"></param>
         /// <param name="takeLastCount"></param>
         public static void SyncStreams(List<StreamSpec> selectedSteams, int takeLastCount = 15)
         {
-            // 通过Date同步
+            // Synchronize by Date
             if (selectedSteams.All(x => x.Playlist!.MediaParts[0].MediaSegments.All(x => x.DateTime != null)))
             {
                 DateTime? minDate = selectedSteams.Max(s =>
@@ -225,12 +225,12 @@ namespace N_m3u8DL_RE.Util
                 {
                     foreach (MediaPart part in item.Playlist!.MediaParts)
                     {
-                        // 秒级同步 忽略毫秒
+                        // Second-level synchronization, ignore milliseconds
                         part.MediaSegments = [.. part.MediaSegments.Where(s => s.DateTime!.Value.Ticks / TimeSpan.TicksPerSecond >= minDate.Value.Ticks / TimeSpan.TicksPerSecond)];
                     }
                 }
             }
-            else // 通过index同步
+            else // Synchronize by index
             {
                 long minIndex = selectedSteams.Max(s =>
                 {
@@ -249,7 +249,7 @@ namespace N_m3u8DL_RE.Util
                 }
             }
 
-            // 取最新的N个分片
+            // Take the latest N segments
             if (selectedSteams.Any(x => x.Playlist!.MediaParts[0].MediaSegments.Count > takeLastCount))
             {
                 int skipCount = selectedSteams.Min(x => x.Playlist!.MediaParts[0].MediaSegments.Count) - takeLastCount + 1;
@@ -269,7 +269,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 应用用户自定义的分片范围
+        /// Apply user-defined segment range
         /// </summary>
         /// <param name="selectedSteams"></param>
         /// <param name="customRange"></param>
@@ -318,7 +318,7 @@ namespace N_m3u8DL_RE.Util
         }
 
         /// <summary>
-        /// 根据用户输入，清除广告分片
+        /// Clear ad segments based on user input
         /// </summary>
         /// <param name="selectedSteams"></param>
         /// <param name="keywords"></param>
@@ -346,16 +346,16 @@ namespace N_m3u8DL_RE.Util
 
                 foreach (MediaPart part in stream.Playlist.MediaParts)
                 {
-                    // 没有找到广告分片
+                    // No ad segment found
                     if (part.MediaSegments.All(x => regList.All(reg => !reg.IsMatch(x.Url))))
                     {
                         continue;
                     }
-                    // 找到广告分片 清理
+                    // Found ad segment, clean
                     part.MediaSegments = [.. part.MediaSegments.Where(x => regList.All(reg => !reg.IsMatch(x.Url)))];
                 }
 
-                // 清理已经为空的 part
+                // Clean up empty parts
                 stream.Playlist.MediaParts = [.. stream.Playlist.MediaParts.Where(x => x.MediaSegments.Count > 0)];
 
                 int countAfter = stream.SegmentsCount;

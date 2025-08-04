@@ -5,7 +5,7 @@ namespace N_m3u8DL_RE.Crypto
     internal static class AESUtil
     {
         /// <summary>
-        /// AES-128解密，解密后原地替换文件
+        /// AES-128 decryption, replace the file in place after decryption
         /// </summary>
         /// <param name="filePath"></param>
         /// <param name="keyByte"></param>
