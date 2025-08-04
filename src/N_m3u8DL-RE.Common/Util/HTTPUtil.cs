@@ -24,8 +24,26 @@ namespace N_m3u8DL_RE.Common.Util
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
         };
 
-        private static async Task<HttpResponseMessage> DoGetAsync(string url, Dictionary<string, string>? headers = null)
+        private static async Task<HttpResponseMessage> DoGetAsync(string url, Dictionary<string, string>? headers = null, int maxRedirects = 10, HashSet<string>? visitedUrls = null)
         {
+            // Initialize visited URLs tracking on first call
+            visitedUrls ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Check for redirect limit exceeded
+            if (maxRedirects <= 0)
+            {
+                throw new InvalidOperationException($"Maximum redirect limit exceeded. Last URL: {url}");
+            }
+
+            // Check for redirect loop
+            if (visitedUrls.Contains(url))
+            {
+                throw new InvalidOperationException($"Redirect loop detected. URL already visited: {url}");
+            }
+
+            // Add current URL to visited set
+            _ = visitedUrls.Add(url);
+
             Logger.Debug(ResString.Fetch + url);
             using HttpRequestMessage webRequest = new(HttpMethod.Get, url);
             _ = webRequest.Headers.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate");
@@ -39,96 +57,118 @@ namespace N_m3u8DL_RE.Common.Util
                 }
             }
             Logger.Debug(webRequest.Headers.ToString());
-            // 手动处理跳转，以免自定义Headers丢失
+            // Manually handle redirects to avoid loss of custom headers
             HttpResponseMessage webResponse = await AppHttpClient.SendAsync(webRequest, HttpCompletionOption.ResponseHeadersRead);
-            if (((int)webResponse.StatusCode).ToString(CultureInfo.InvariantCulture).StartsWith("30", StringComparison.OrdinalIgnoreCase))
+            if (webResponse.StatusCode is >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest)
             {
                 HttpResponseHeaders respHeaders = webResponse.Headers;
                 Logger.Debug(respHeaders.ToString());
                 if (respHeaders.Location != null)
                 {
-                    string redirectedUrl = "";
-                    if (!respHeaders.Location.IsAbsoluteUri)
-                    {
-                        Uri uri1 = new(url);
-                        Uri uri2 = new(uri1, respHeaders.Location);
-                        redirectedUrl = uri2.ToString();
-                    }
-                    else
-                    {
-                        redirectedUrl = respHeaders.Location.AbsoluteUri;
-                    }
+                    string redirectedUrl = respHeaders.Location.IsAbsoluteUri
+                        ? respHeaders.Location.AbsoluteUri
+                        : new Uri(new Uri(url), respHeaders.Location).AbsoluteUri;
 
-                    if (redirectedUrl != url)
+                    if (!string.Equals(redirectedUrl, url, StringComparison.OrdinalIgnoreCase))
                     {
-                        Logger.Extra($"Redirected => {redirectedUrl}");
-                        return await DoGetAsync(redirectedUrl, headers);
+                        Logger.Extra($"Redirected => {redirectedUrl} (Redirects remaining: {maxRedirects - 1})");
+                        webResponse.Dispose();
+                        return await DoGetAsync(redirectedUrl, headers, maxRedirects - 1, visitedUrls);
                     }
                 }
             }
-            // 手动将跳转后的URL设置进去, 用于后续取用
-            webResponse.Headers.Location = new Uri(url);
+
+            // Return the response
             _ = webResponse.EnsureSuccessStatusCode();
             return webResponse;
         }
 
         public static async Task<byte[]> GetBytesAsync(string url, Dictionary<string, string>? headers = null)
         {
-            if (url.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            return url.StartsWith("file:", StringComparison.OrdinalIgnoreCase)
+                ? await File.ReadAllBytesAsync(new Uri(url).LocalPath)
+                : await RetryUtil.WebRequestRetryAsync(async () =>
             {
-                return await File.ReadAllBytesAsync(new Uri(url).LocalPath);
-            }
-            HttpResponseMessage webResponse = await DoGetAsync(url, headers);
-            byte[] bytes = await webResponse.Content.ReadAsByteArrayAsync();
-            Logger.Debug(HexUtil.BytesToHex(bytes, " "));
-            return bytes;
+                using HttpResponseMessage webResponse = await DoGetAsync(url, headers);
+
+                // Get content length for pre-allocation if available
+                long? contentLength = webResponse.Content.Headers.ContentLength;
+
+                if (contentLength.HasValue && contentLength.Value > 100 * 1024 * 1024) // > 100MB
+                {
+                    // Use streaming for large files
+                    using Stream stream = await webResponse.Content.ReadAsStreamAsync();
+                    using MemoryStream memoryStream = new((int)contentLength.Value);
+                    await stream.CopyToAsync(memoryStream);
+                    return memoryStream.ToArray();
+                }
+
+                return await webResponse.Content.ReadAsByteArrayAsync();
+            }) ?? throw new InvalidOperationException($"Failed to download bytes from {url} after all retry attempts");
         }
 
         /// <summary>
-        /// 获取网页源码
+        /// Get the webpage source code
         /// </summary>
         /// <param name="url"></param>
         /// <param name="headers"></param>
         /// <returns></returns>
         public static async Task<string> GetWebSourceAsync(string url, Dictionary<string, string>? headers = null)
         {
-            HttpResponseMessage webResponse = await DoGetAsync(url, headers);
-            string htmlCode = await webResponse.Content.ReadAsStringAsync();
-            Logger.Debug(htmlCode);
-            return htmlCode;
+            return await RetryUtil.WebRequestRetryAsync(async () =>
+            {
+                using HttpResponseMessage webResponse = await DoGetAsync(url, headers);
+                string htmlCode = await webResponse.Content.ReadAsStringAsync();
+                Logger.Debug(htmlCode);
+                return htmlCode;
+            }) ?? throw new InvalidOperationException("Failed to get web source");
         }
 
         private static bool CheckMPEG2TS(HttpResponseMessage? webResponse)
         {
-            string? mediaType = webResponse?.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
-            return (webResponse?.Content.Headers.ContentLength) == null && mediaType is "video/ts" or "video/mp2t" or "video/mpeg" or "application/octet-stream";
+            if (webResponse?.Content.Headers.ContentType == null)
+            {
+                return false;
+            }
+
+            string? mediaType = webResponse.Content.Headers.ContentType.MediaType?.ToLowerInvariant();
+            bool hasUnknownLength = webResponse.Content.Headers.ContentLength == null;
+
+            string[] mpegTypes = ["video/ts", "video/mp2t", "video/mpeg", "application/octet-stream"];
+            return hasUnknownLength && mpegTypes.Contains(mediaType);
         }
 
         /// <summary>
-        /// 获取网页源码和跳转后的URL
+        /// Get the web page source code and the final resolved URL
         /// </summary>
         /// <param name="url"></param>
         /// <param name="headers"></param>
-        /// <returns>(Source Code, RedirectedUrl)</returns>
+        /// <returns>(Source Code, Final Resolved URL)</returns>
         public static async Task<(string, string)> GetWebSourceAndNewUrlAsync(string url, Dictionary<string, string>? headers = null)
         {
-            string htmlCode;
-            HttpResponseMessage webResponse = await DoGetAsync(url, headers);
-            htmlCode = CheckMPEG2TS(webResponse) ? ResString.ReLiveTs : await webResponse.Content.ReadAsStringAsync();
-            Logger.Debug(htmlCode);
-            return (htmlCode, webResponse.Headers.Location != null ? webResponse.Headers.Location.AbsoluteUri : url);
+            return await RetryUtil.WebRequestRetryAsync(async () =>
+            {
+                using HttpResponseMessage webResponse = await DoGetAsync(url, headers);
+                string htmlCode = CheckMPEG2TS(webResponse) ? ResString.ReLiveTs : await webResponse.Content.ReadAsStringAsync();
+                Logger.Debug(htmlCode);
+
+                // Get the final URL from the proper source - either from the request message or fallback to original
+                Uri finalUrl = webResponse.RequestMessage?.RequestUri ?? new Uri(url);
+                return (htmlCode, finalUrl.AbsoluteUri);
+            });
         }
 
         public static async Task<string> GetPostResponseAsync(string Url, byte[] postData)
         {
-            string htmlCode;
-            using HttpRequestMessage request = new(HttpMethod.Post, Url);
-            _ = request.Headers.TryAddWithoutValidation("Content-Type", "application/json");
-            _ = request.Headers.TryAddWithoutValidation("Content-Length", postData.Length.ToString(CultureInfo.InvariantCulture));
-            request.Content = new ByteArrayContent(postData);
-            HttpResponseMessage webResponse = await AppHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            htmlCode = await webResponse.Content.ReadAsStringAsync();
-            return htmlCode;
+            return await RetryUtil.WebRequestRetryAsync(async () =>
+            {
+                using HttpRequestMessage request = new(HttpMethod.Post, Url);
+                _ = request.Headers.TryAddWithoutValidation("Content-Type", "application/json");
+                _ = request.Headers.TryAddWithoutValidation("Content-Length", postData.Length.ToString(CultureInfo.InvariantCulture));
+                request.Content = new ByteArrayContent(postData);
+                using HttpResponseMessage webResponse = await AppHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                return await webResponse.Content.ReadAsStringAsync();
+            }) ?? throw new InvalidOperationException($"Failed to post data to {Url} after all retry attempts");
         }
     }
 }
