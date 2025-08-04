@@ -12,12 +12,12 @@ on:
                 required: false
             version:
                 type: string
-                description: "Version in format x.x.x-dirty (e.g. 1.0.0-dirty)"
+                description: "Version in format x.x.x (e.g. 1.0.0)"
                 required: false
                 default: "1.0.0-dirty"
             builddate:
                 type: string
-                description: "Build date in format 2025xxxx (e.g. 20250115) - leave empty for auto-generated"
+                description: "Build date in format yearmonthday (e.g. 20250115) - leave empty for auto-generated"
                 required: false
             ref:
                 type: string
@@ -394,7 +394,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
-        if: ${{ github.event.inputs.doRelease == 'true' }}
+        if: ${{ github.event.inputs.doRelease == 'true' || github.event_name == 'push' }}
         needs:
             [
                 set-date,
