@@ -91,6 +91,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - run: powershell -Command "(Get-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj) -replace '<TargetFramework>.*</TargetFramework>', '<TargetFramework>net9.0-windows</TargetFramework>' | Set-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj"
             - run: dotnet add src/N_m3u8DL-RE/N_m3u8DL-RE.csproj package YY-Thunks --version 1.1.4
@@ -125,6 +126,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - run: dotnet publish src/N_m3u8DL-RE -r win-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r win-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
@@ -214,6 +216,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - run: dotnet publish src/N_m3u8DL-RE -r linux-x64 -c Release -o artifact -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r linux-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
@@ -269,6 +272,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - name: Publish AOT [x64]
               run: |
@@ -354,6 +358,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - run: apt-get update
             - run: apt-get install -y build-essential clang binutils-aarch64-linux-gnu
@@ -384,6 +389,7 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
                   cache: true
+                  cache-dependency-path: "src/**/packages.lock.json"
 
             - run: dotnet publish src/N_m3u8DL-RE -r osx-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r osx-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
