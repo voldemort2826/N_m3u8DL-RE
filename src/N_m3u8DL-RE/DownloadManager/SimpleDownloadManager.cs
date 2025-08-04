@@ -709,7 +709,13 @@ namespace N_m3u8DL_RE.DownloadManager
             ProgressColumn[] progressColumns =
             [
                 new TaskDescriptionColumn() { Alignment = Justify.Left },
-                new ProgressBarColumn(){ Width = 30 },
+                new ProgressBarColumn()
+                {
+                    Width = 30,
+                    CompletedStyle = new Style(foreground: Color.Cyan1),
+                    RemainingStyle = new Style(foreground: Color.Grey),
+                    FinishedStyle = new Style(foreground: Color.Green)
+                },
                 new MyPercentageColumn(),
                 new DownloadStatusColumn(SpeedContainerDic),
                 new DownloadSpeedColumn(SpeedContainerDic), // 速度计算

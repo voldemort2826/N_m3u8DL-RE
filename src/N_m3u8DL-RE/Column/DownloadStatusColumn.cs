@@ -41,6 +41,7 @@ namespace N_m3u8DL_RE.Column
             if (task.IsFinished)
             {
                 sizeStr = GlobalUtil.FormatFileSize(size);
+                return new Text(sizeStr ?? "-", FinishedStyle).RightJustified();
             }
 
             return new Text(sizeStr ?? "-", MyStyle).RightJustified();
