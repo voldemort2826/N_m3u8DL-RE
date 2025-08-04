@@ -4,7 +4,20 @@ namespace N_m3u8DL_RE.Common.Util
     {
         public static string BytesToHex(byte[] data, string split = "")
         {
-            return BitConverter.ToString(data).Replace("-", split);
+            return BytesToHex(data.AsSpan(), split);
+        }
+
+        public static string BytesToHex(ReadOnlySpan<byte> data, string split = "")
+        {
+            if (data.IsEmpty)
+            {
+                return string.Empty;
+            }
+
+            // Convert.ToHexString is the most efficient for spans in .NET 5+
+            string hex = Convert.ToHexString(data);
+
+            return string.IsNullOrEmpty(split) ? hex : string.Join(split, hex.AsEnumerable().Select(c => c.ToString()));
         }
 
         /// <summary>
