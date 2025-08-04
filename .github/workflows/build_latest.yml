@@ -10,6 +10,11 @@ on:
                 type: boolean
                 default: false
                 required: false
+            version:
+                type: string
+                description: "Version in format x.x.x-dirty (e.g. 1.0.0-dirty)"
+                required: false
+                default: "1.0.0-dirty"
             builddate:
                 type: string
                 description: "Build date in format 2025xxxx (e.g. 20250115) - leave empty for auto-generated"
@@ -23,17 +28,29 @@ on:
 env:
     DOTNET_SDK_VERSION: "9.0.*"
     ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+    BASE_VERSION: "1.0"
 
 jobs:
     set-date:
         runs-on: ubuntu-latest
         outputs:
+            version: ${{ steps.get_version.outputs.version }}
             builddate: ${{ steps.get_builddate.outputs.builddate }}
             tag: ${{ steps.format_tag.outputs.tag }}
         steps:
             - uses: actions/checkout@main
               with:
                   ref: ${{ github.event.inputs.ref || github.ref }}
+
+            - name: Get Version
+              id: get_version
+              run: |
+                  if [ "${{ github.event.inputs.doRelease }}" == "true" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+                    VERSION="${{ github.event.inputs.version }}"
+                  else
+                    VERSION="${{ env.BASE_VERSION }}.${{ github.run_number }}"
+                  fi
+                  echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
             - name: Get Build Date
               id: get_builddate
@@ -77,7 +94,7 @@ jobs:
             - run: powershell -Command "(Get-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj) -replace '<TargetFramework>.*</TargetFramework>', '<TargetFramework>net9.0-windows</TargetFramework>' | Set-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj"
             - run: dotnet add src/N_m3u8DL-RE/N_m3u8DL-RE.csproj package YY-Thunks --version 1.1.4
             - run: dotnet add src/N_m3u8DL-RE/N_m3u8DL-RE.csproj package VC-LTL --version 5.1.1
-            - run: dotnet publish src/N_m3u8DL-RE -p:TargetPlatformMinVersion=6.0 -r win-x86 -c Release -o artifact-x86 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -p:TargetPlatformMinVersion=6.0 -r win-x86 -c Release -o artifact-x86 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [win-x86]
               run: |
@@ -107,8 +124,8 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-            - run: dotnet publish src/N_m3u8DL-RE -r win-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
-            - run: dotnet publish src/N_m3u8DL-RE -r win-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r win-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r win-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [win]
               run: |
@@ -195,8 +212,8 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-x64 -c Release -o artifact -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-x64 -c Release -o artifact -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [linux]
               run: |
@@ -242,8 +259,8 @@ jobs:
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-x64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-arm64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-x64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-bionic-arm64 -p:DisableUnsupportedError=true -p:PublishAotUsingRuntimePack=true -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [linux-bionic]
               run: |
@@ -275,7 +292,7 @@ jobs:
                   ref: ${{ github.event.inputs.ref || github.ref }}
 
             - run: apk add clang build-base zlib-dev
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-musl-x64 -c Release -o artifact -p:InvariantGlobalization=true -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-musl-x64 -c Release -o artifact -p:InvariantGlobalization=true -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [linux-musl-x64]
               run: |
@@ -305,7 +322,7 @@ jobs:
 
             - run: apt-get update
             - run: apt-get install -y build-essential clang binutils-aarch64-linux-gnu
-            - run: dotnet publish src/N_m3u8DL-RE -r linux-musl-arm64 -c Release -o artifact -p:CppCompilerAndLinker=clang -p:SysRoot=/crossrootfs/arm64 -p:InvariantGlobalization=true -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r linux-musl-arm64 -c Release -o artifact -p:CppCompilerAndLinker=clang -p:SysRoot=/crossrootfs/arm64 -p:InvariantGlobalization=true -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [linux-musl-arm64]
               run: |
@@ -331,8 +348,8 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-            - run: dotnet publish src/N_m3u8DL-RE -r osx-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
-            - run: dotnet publish src/N_m3u8DL-RE -r osx-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r osx-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
+            - run: dotnet publish src/N_m3u8DL-RE -r osx-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
             - name: Package [osx]
               run: |
