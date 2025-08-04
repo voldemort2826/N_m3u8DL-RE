@@ -90,6 +90,7 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
 
             - run: powershell -Command "(Get-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj) -replace '<TargetFramework>.*</TargetFramework>', '<TargetFramework>net9.0-windows</TargetFramework>' | Set-Content src/N_m3u8DL-RE/N_m3u8DL-RE.csproj"
             - run: dotnet add src/N_m3u8DL-RE/N_m3u8DL-RE.csproj package YY-Thunks --version 1.1.4
@@ -123,6 +124,7 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
 
             - run: dotnet publish src/N_m3u8DL-RE -r win-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r win-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
@@ -211,6 +213,7 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
 
             - run: dotnet publish src/N_m3u8DL-RE -r linux-x64 -c Release -o artifact -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r linux-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
@@ -239,21 +242,33 @@ jobs:
         needs: set-date
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@main
               with:
                   ref: ${{ github.event.inputs.ref || github.ref }}
 
+            - name: Cache Android NDK
+              uses: actions/cache@main
+              with:
+                  path: android-ndk-r27c
+                  key: android-ndk-r27c-${{ runner.os }}
+                  restore-keys: |
+                      android-ndk-r27c-
+
             - name: Set up NDK
               run: |
-                  wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
-                  unzip android-ndk-r27c-linux.zip
+                  if [ ! -d "android-ndk-r27c" ]; then
+                    wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
+                    unzip android-ndk-r27c-linux.zip
+                    rm android-ndk-r27c-linux.zip
+                  fi
                   echo "NDK_ROOT=$PWD/android-ndk-r27c" >> $GITHUB_ENV
                   echo "$PWD/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
             - name: Set up dotnet
-              uses: actions/setup-dotnet@v4
+              uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
 
             - name: Publish AOT [x64]
               run: |
@@ -289,13 +304,13 @@ jobs:
                   tar -czvf ../N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-arm64.tar.gz N_m3u8DL-RE
 
             - name: Upload Artifact [linux-bionic-x64]
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@main
               with:
                   name: android-bionic-x64
                   path: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-x64.tar.gz
 
             - name: Upload Artifact [linux-bionic-arm64]
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@main
               with:
                   name: android-bionic-arm64
                   path: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}_android-bionic-arm64.tar.gz
@@ -338,6 +353,7 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
 
             - run: apt-get update
             - run: apt-get install -y build-essential clang binutils-aarch64-linux-gnu
@@ -367,6 +383,8 @@ jobs:
               uses: actions/setup-dotnet@main
               with:
                   dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+                  cache: true
+
             - run: dotnet publish src/N_m3u8DL-RE -r osx-arm64 -c Release -o artifact-arm64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
             - run: dotnet publish src/N_m3u8DL-RE -r osx-x64 -c Release -o artifact-x64 -p:Version=${{ needs.set-date.outputs.version }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
 
