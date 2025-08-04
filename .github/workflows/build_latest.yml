@@ -443,6 +443,7 @@ jobs:
                   name: N_m3u8DL-RE_${{ needs.set-date.outputs.builddate }}
                   artifacts: "android-bionic-x64/*,android-bionic-arm64/*,linux-x64/*,linux-arm64/*,linux-musl-x64/*,linux-musl-arm64/*,osx-x64/*,osx-arm64/*,win-x64/*,win-arm64/*,win-NT6.0-x86/*"
                   draft: false
+                  makeLatest: true
                   allowUpdates: true
                   generateReleaseNotes: true
                   discussionCategory: "announcements"
