@@ -1,6 +1,8 @@
 name: Build Latest
 
 on:
+    push:
+        branches: [quality-of-life]
     workflow_dispatch:
         inputs:
             doRelease:
@@ -10,13 +12,13 @@ on:
                 required: false
             builddate:
                 type: string
-                description: "Build date in format 2025xxxx (e.g. 20250115)"
-                required: true
+                description: "Build date in format 2025xxxx (e.g. 20250115) - leave empty for auto-generated"
+                required: false
             ref:
                 type: string
                 description: "Git ref from which to release"
-                required: true
-                default: "main"
+                required: false
+                default: "quality-of-life"
 
 env:
     DOTNET_SDK_VERSION: "9.0.*"
@@ -31,12 +33,12 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Get Build Date
               id: get_builddate
               run: |
-                  if [ "${{ github.event.inputs.doRelease }}" == "true" ]; then
+                  if [ "${{ github.event.inputs.doRelease }}" == "true" ] && [ -n "${{ github.event.inputs.builddate }}" ]; then
                     BUILDDATE="${{ github.event.inputs.builddate }}"
                   else
                     BUILDDATE=$(date -u -d '8 hours' +'%Y%m%d')
@@ -62,7 +64,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Install zip
               run: choco install zip --no-progress --yes
@@ -95,7 +97,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Install zip
               run: choco install zip --no-progress --yes
@@ -187,7 +189,7 @@ jobs:
 
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
             - name: Set up dotnet
               uses: actions/setup-dotnet@main
               with:
@@ -222,7 +224,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Set up NDK
               shell: pwsh
@@ -270,7 +272,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - run: apk add clang build-base zlib-dev
             - run: dotnet publish src/N_m3u8DL-RE -r linux-musl-x64 -c Release -o artifact -p:InvariantGlobalization=true -p:Version=${{ needs.set-date.outputs.builddate }} -p:BuildDate=${{ needs.set-date.outputs.builddate }}
@@ -294,7 +296,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Set up dotnet
               uses: actions/setup-dotnet@main
@@ -323,7 +325,7 @@ jobs:
         steps:
             - uses: actions/checkout@main
               with:
-                  ref: ${{ github.event.inputs.ref }}
+                  ref: ${{ github.event.inputs.ref || github.ref }}
 
             - name: Set up dotnet
               uses: actions/setup-dotnet@main
