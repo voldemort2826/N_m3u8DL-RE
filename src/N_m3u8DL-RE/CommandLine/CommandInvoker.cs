@@ -61,7 +61,7 @@ namespace N_m3u8DL_RE.CommandLine
         private static readonly Option<bool> AppendUrlParams = new("--append-url-params") { Description = ResString.CmdAppendUrlParams, DefaultValueFactory = (_) => false };
         private static readonly Option<bool> MP4RealTimeDecryption = new("--mp4-real-time-decryption") { Description = ResString.CmdMP4RealTimeDecryption, DefaultValueFactory = (_) => false };
         private static readonly Option<bool> UseShakaPackager = new("--use-shaka-packager") { Description = ResString.CmdUseShakaPackager, DefaultValueFactory = (_) => false, Hidden = true };
-        private static readonly Option<DecryptEngine> DecryptionEngine = new("--decryption-engine") { Description = ResString.CmdDecryptionEngine, DefaultValueFactory = (_) => DecryptEngine.MP4DECRYPT };
+        private static readonly Option<DecryptEngine> DecryptionEngine = new("--decryption-engine") { Description = ResString.CmdDecryptionEngine, DefaultValueFactory = (_) => DecryptEngine.FFMPEG };
         private static readonly Option<bool> ForceAnsiConsole = new("--force-ansi-console") { Description = ResString.CmdForceAnsiConsole };
         private static readonly Option<bool> NoAnsiColor = new("--no-ansi-color") { Description = ResString.CmdNoAnsiColor };
         private static readonly Option<string?> DecryptionBinaryPath = new("--decryption-binary-path") { Description = ResString.CmdDecryptionBinaryPath, HelpName = "PATH" };
