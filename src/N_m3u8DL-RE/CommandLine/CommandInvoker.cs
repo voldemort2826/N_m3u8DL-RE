@@ -129,15 +129,25 @@ namespace N_m3u8DL_RE.CommandLine
                 Regex reg = SpeedStrRegex();
                 if (!reg.IsMatch(input))
                 {
-                    throw new ArgumentException($"Invalid Speed Limit: {input}");
+                    throw new ArgumentException($"Invalid speed limit format: {input}. " +
+                        "Please use e.g. '10M' (megabytes/sec) or '500K' (kilobytes/sec).");
                 }
 
-                double number = double.Parse(reg.Match(input).Groups[1].Value, CultureInfo.InvariantCulture);
-                return reg.Match(input).Groups[2].Value == "M" ? (long)(number * 1024 * 1024) : (long)(number * 1024);
+                Match match = reg.Match(input);
+                double number = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                if (number <= 0)
+                {
+                    throw new ArgumentException("Speed limit must be greater than 0.");
+                }
+
+                string unit = match.Groups[2].Value;
+                return unit == "M"
+                    ? (long)(number * 1024 * 1024)
+                    : (long)(number * 1024);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                result.AddError($"error in parse SpeedLimit: {input}");
+                result.AddError($"Error parsing speed limit: {ex.Message}");
                 return null;
             }
         }
