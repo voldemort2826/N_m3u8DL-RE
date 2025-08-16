@@ -170,5 +170,82 @@ namespace N_m3u8DL_RE.Common.Util
                 return await webResponse.Content.ReadAsStringAsync();
             }) ?? throw new InvalidOperationException($"Failed to post data to {Url} after all retry attempts");
         }
+
+        /// <summary>
+        /// Gets the content length of a URL using HTTP HEAD request
+        /// </summary>
+        /// <param name="url">URL to check</param>
+        /// <param name="headers">Custom headers</param>
+        /// <param name="timeoutSeconds">Timeout in seconds</param>
+        /// <returns>Content length in bytes, or 0 if failed</returns>
+        public static async Task<long> GetContentLengthAsync(string url, Dictionary<string, string>? headers = null, int timeoutSeconds = 10)
+        {
+            try
+            {
+                using CancellationTokenSource cts = new(TimeSpan.FromSeconds(timeoutSeconds));
+
+                // Create dedicated HttpClient to avoid shared resource issues
+                using HttpClient client = new(new HttpClientHandler()
+                {
+                    AllowAutoRedirect = false,
+                    AutomaticDecompression = DecompressionMethods.All,
+                    ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true,
+                    MaxConnectionsPerServer = 1024,
+                })
+                {
+                    Timeout = TimeSpan.FromSeconds(timeoutSeconds + 2)
+                };
+
+                using HttpRequestMessage request = new(HttpMethod.Head, url);
+
+                // Add custom headers if provided
+                if (headers != null)
+                {
+                    foreach (KeyValuePair<string, string> header in headers)
+                    {
+                        _ = request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                    }
+                }
+
+                using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return response.Content.Headers.ContentLength ?? 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug($"Failed to get content length for {url}: {ex.Message}");
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Sample items evenly distributed across a list
+        /// </summary>
+        /// <param name="allItems">All available items</param>
+        /// <param name="sampleSize">Desired sample size</param>
+        /// <returns>Sampled items</returns>
+        public static List<T> SampleEvenly<T>(IList<T> allItems, int sampleSize)
+        {
+            if (allItems.Count <= sampleSize)
+            {
+                return [.. allItems];
+            }
+
+            List<T> sampleItems = [];
+            double step = (double)allItems.Count / sampleSize;
+
+            for (int i = 0; i < sampleSize; i++)
+            {
+                // Fixed: Clamp index to avoid out-of-range
+                int index = Math.Min((int)(i * step), allItems.Count - 1);
+                sampleItems.Add(allItems[index]);
+            }
+
+            return sampleItems;
+        }
     }
 }

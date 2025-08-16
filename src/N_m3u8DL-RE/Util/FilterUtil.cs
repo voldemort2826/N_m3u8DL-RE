@@ -4,6 +4,7 @@ using N_m3u8DL_RE.Common.CommonEnumerations;
 using N_m3u8DL_RE.Common.Entity;
 using N_m3u8DL_RE.Common.Log;
 using N_m3u8DL_RE.Common.Resource;
+using N_m3u8DL_RE.Common.Util;
 using N_m3u8DL_RE.Entity;
 
 using Spectre.Console;
@@ -199,6 +200,9 @@ namespace N_m3u8DL_RE.Util
             // Multiple selection
             List<StreamSpec> selectedStreams = CustomAnsiConsole.Console.Prompt(prompt);
 
+            // Display total download size
+            DisplayTotalDownloadSize(selectedStreams);
+
             return selectedStreams;
         }
 
@@ -364,6 +368,61 @@ namespace N_m3u8DL_RE.Util
                 {
                     Logger.WarnMarkUp("[grey]{} segments => {} segments[/]", countBefore, countAfter);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Displays total download size for selected streams
+        /// </summary>
+        /// <param name="selectedStreams">Selected streams</param>
+        public static void DisplayTotalDownloadSize(List<StreamSpec> selectedStreams)
+        {
+            if (selectedStreams.Count == 0)
+            {
+                return;
+            }
+
+            // Calculate total size and group by accuracy
+            long totalSize = 0;
+            Dictionary<string, (long size, int count)> accuracyGroups = [];
+
+            foreach (StreamSpec stream in selectedStreams)
+            {
+                long streamSize = stream.EstimateDownloadSize();
+                totalSize += streamSize;
+
+                if (streamSize > 0)
+                {
+                    string accuracy = stream.EstimationAccuracy?.ToString() ?? "Unknown";
+                    if (accuracyGroups.TryGetValue(accuracy, out (long size, int count) value))
+                    {
+                        accuracyGroups[accuracy] = (value.size + streamSize, value.count + 1);
+                    }
+                    else
+                    {
+                        accuracyGroups[accuracy] = (streamSize, 1);
+                    }
+                }
+            }
+
+            if (totalSize > 0)
+            {
+                Logger.InfoMarkUp($"[bold cyan]Total estimated download size: {GlobalUtil.FormatFileSize(totalSize)}[/]");
+
+                // Show accuracy breakdown if there are multiple types
+                if (accuracyGroups.Count > 1)
+                {
+                    Logger.InfoMarkUp("[grey]Size estimation breakdown:[/]");
+                    foreach ((string accuracy, (long size, int count)) in accuracyGroups.OrderByDescending(x => x.Value.size))
+                    {
+                        string percentage = totalSize > 0 ? $" ({(double)size / totalSize:P1})" : "";
+                        Logger.InfoMarkUp($"[grey]  {accuracy}: {GlobalUtil.FormatFileSize(size)} from {count} stream(s){percentage}[/]");
+                    }
+                }
+            }
+            else
+            {
+                Logger.InfoMarkUp("[yellow]Total download size: Unable to estimate[/]");
             }
         }
     }

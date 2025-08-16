@@ -359,6 +359,12 @@ async Task DoWorkAsync(MyOption option)
     }
     else
     {
+        if (!option.AutoSelect && !option.SubOnly &&
+            option.VideoFilter == null && option.AudioFilter == null && option.SubtitleFilter == null)
+        {
+            // Estimate sizes for interactive selection
+            await SizeEstimationUtil.EstimateStreamSizesBySamplingAsync(lists, 3, parserConfig.Headers);
+        }
         // Show interactive selection box
         selectedStreams = FilterUtil.SelectStreams(lists);
     }
@@ -406,6 +412,10 @@ async Task DoWorkAsync(MyOption option)
     {
         Logger.InfoMarkUp(item.ToString());
     }
+
+    // Display total download size for final selection
+    Logger.InfoMarkUp(""); // Empty line for spacing
+    FilterUtil.DisplayTotalDownloadSize(selectedStreams);
 
     // Write file
     await WriteRawFilesAsync(option, extractor, tmpDir);
