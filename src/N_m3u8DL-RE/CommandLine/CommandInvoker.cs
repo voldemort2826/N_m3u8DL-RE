@@ -722,10 +722,9 @@ namespace N_m3u8DL_RE.CommandLine
                 await action(myOption);
             });
 
-            CommandLineConfiguration config = new(rootCommand)
+            ParserConfiguration config = new()
             {
                 EnablePosixBundling = false,
-                EnableDefaultExceptionHandler = false
             };
 
             try
