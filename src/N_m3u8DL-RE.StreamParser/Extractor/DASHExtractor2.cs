@@ -248,34 +248,31 @@ namespace N_m3u8DL_RE.StreamParser.Extractor
                             if (initialization != null)
                             {
                                 string? sourceURL = initialization.Attribute("sourceURL")?.Value;
-                                if (sourceURL == null)
+                                string initUrl = sourceURL != null
+                                    ? ParserUtil.CombineURL(segBaseUrl, sourceURL)
+                                    : segBaseUrl;
+
+                                string? initRange = initialization.Attribute("range")?.Value;
+                                streamSpec.Playlist.MediaInit = new MediaSegment
                                 {
-                                    streamSpec.Playlist.MediaParts[0].MediaSegments.Add
-                                    (
-                                        new MediaSegment()
-                                        {
-                                            Index = 0,
-                                            Url = segBaseUrl,
-                                            Duration = XmlConvert.ToTimeSpan(periodDuration ?? mediaPresentationDuration ?? "PT0S").TotalSeconds
-                                        }
-                                    );
-                                }
-                                else
+                                    Index = -1, // For sorting
+                                    Url = initUrl
+                                };
+                                if (initRange != null)
                                 {
-                                    string initUrl = ParserUtil.CombineURL(segBaseUrl, initialization.Attribute("sourceURL")?.Value!);
-                                    string? initRange = initialization.Attribute("range")?.Value;
-                                    streamSpec.Playlist.MediaInit = new MediaSegment
-                                    {
-                                        Index = -1, // For sorting
-                                        Url = initUrl
-                                    };
-                                    if (initRange != null)
-                                    {
-                                        (long start, long expect) = ParserUtil.ParseRange(initRange);
-                                        streamSpec.Playlist.MediaInit.StartRange = start;
-                                        streamSpec.Playlist.MediaInit.ExpectLength = expect;
-                                    }
+                                    (long start, long expect) = ParserUtil.ParseRange(initRange);
+                                    streamSpec.Playlist.MediaInit.StartRange = start;
+                                    streamSpec.Playlist.MediaInit.ExpectLength = expect;
                                 }
+                            }
+
+                            // Parse SegmentBase indexRange="start-end"
+                            string? indexRangeAttr = segmentBaseElement.Attribute("indexRange")?.Value;
+                            if (!string.IsNullOrEmpty(indexRangeAttr))
+                            {
+                                (long start, long length) = ParserUtil.ParseRange(indexRangeAttr);
+                                streamSpec.Playlist.IndexRangeStart = start;
+                                streamSpec.Playlist.IndexRangeEnd = start + length - 1;
                             }
                         }
 

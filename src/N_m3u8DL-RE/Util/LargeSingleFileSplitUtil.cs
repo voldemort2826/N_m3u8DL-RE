@@ -10,16 +10,17 @@ namespace N_m3u8DL_RE.Util
         {
             public required int Index;
             public required long From;
-            public required long To;
+            public required long To; // inclusive; use -1 to indicate "until end"
         }
 
         /// <summary>
         /// Large file slicing processing
         /// </summary>
         /// <param name="segment"></param>
+        /// <param name="playlist"></param>
         /// <param name="headers"></param>
         /// <returns></returns>
-        public static async Task<List<MediaSegment>?> SplitUrlAsync(MediaSegment segment, Dictionary<string, string> headers)
+        public static async Task<List<MediaSegment>?> SplitUrlAsync(MediaSegment segment, Playlist? playlist, Dictionary<string, string> headers)
         {
             string url = segment.Url;
             if (!await CanSplitAsync(url, headers))
@@ -27,29 +28,67 @@ namespace N_m3u8DL_RE.Util
                 return null;
             }
 
+            // Already a ranged segment; do not split
             if (segment.StartRange != null)
             {
                 return null;
             }
 
             long fileSize = await GetFileSizeAsync(url, headers);
-            if (fileSize == 0)
+            if (fileSize <= 0)
             {
                 return null;
             }
 
-            List<Clip> allClips = GetAllClips(fileSize);
             List<MediaSegment> splitSegments = [];
-            foreach (Clip clip in allClips)
+            int outIndex = 0;
+
+            // 1) Add indexRange first if present
+            long? indexStart = playlist?.IndexRangeStart;
+            long? indexEnd = playlist?.IndexRangeEnd;
+            if (indexStart != null && indexEnd != null && indexStart <= indexEnd && indexEnd < fileSize)
             {
+                long length = indexEnd.Value - indexStart.Value + 1;
                 splitSegments.Add(new MediaSegment()
                 {
-                    Index = clip.Index,
+                    Index = outIndex++,
                     Url = url,
-                    StartRange = clip.From,
-                    ExpectLength = clip.To == -1 ? null : clip.To - clip.From + 1,
+                    StartRange = indexStart.Value,
+                    ExpectLength = length,
                     EncryptInfo = segment.EncryptInfo,
                 });
+            }
+
+            // 2) Remainder after init and index, in 5MB chunks
+            long remainderStart = 0;
+
+            // Skip init (downloaded elsewhere)
+            long initEnd = -1;
+            if (playlist?.MediaInit?.StartRange != null && playlist.MediaInit.ExpectLength != null)
+            {
+                initEnd = playlist.MediaInit.StartRange.Value + playlist.MediaInit.ExpectLength.Value - 1;
+            }
+
+            if (indexEnd != null)
+            {
+                remainderStart = Math.Max(remainderStart, indexEnd.Value + 1);
+            }
+            remainderStart = Math.Max(remainderStart, initEnd + 1);
+
+            if (remainderStart < fileSize)
+            {
+                List<Clip> clips = GetAllClips(fileSize, remainderStart, 5 * 1024 * 1024);
+                foreach (Clip clip in clips)
+                {
+                    splitSegments.Add(new MediaSegment()
+                    {
+                        Index = outIndex++,
+                        Url = url,
+                        StartRange = clip.From,
+                        ExpectLength = clip.To - clip.From + 1,
+                        EncryptInfo = segment.EncryptInfo,
+                    });
+                }
             }
 
             return splitSegments;
@@ -78,8 +117,7 @@ namespace N_m3u8DL_RE.Util
 
         private static async Task<long> GetFileSizeAsync(string url, Dictionary<string, string> headers)
         {
-            using HttpRequestMessage httpRequestMessage = new();
-            httpRequestMessage.RequestUri = new(url);
+            using HttpRequestMessage httpRequestMessage = new(HttpMethod.Head, url);
             foreach (KeyValuePair<string, string> header in headers)
             {
                 _ = httpRequestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
@@ -90,37 +128,44 @@ namespace N_m3u8DL_RE.Util
             return totalSizeBytes;
         }
 
-        // This function mainly handles the slicing download logic
-        private static List<Clip> GetAllClips(long fileSize)
+        // Build inclusive byte ranges starting at startOffset, in perSize chunks
+        private static List<Clip> GetAllClips(long fileSize, long startOffset, int perSize)
         {
             List<Clip> clips = [];
-            int index = 0;
-            long counter = 0;
-            int perSize = 10 * 1024 * 1024;
-            while (fileSize > 0)
+            if (startOffset >= fileSize)
             {
-                Clip c = new()
+                return clips;
+            }
+
+            long pos = startOffset;
+            int idx = 0;
+
+            while (pos < fileSize)
+            {
+                long end = pos + perSize - 1;
+                if (end < fileSize - 1)
                 {
-                    Index = index,
-                    From = counter,
-                    To = counter + perSize
-                };
-                // Not at the end
-                if (fileSize - perSize > 0)
-                {
-                    fileSize -= perSize;
-                    counter += perSize + 1;
-                    index++;
-                    clips.Add(c);
+                    clips.Add(new Clip
+                    {
+                        Index = idx++,
+                        From = pos,
+                        To = end
+                    });
+                    pos = end + 1;
                 }
-                // Already at the end
                 else
                 {
-                    c.To = -1;
-                    clips.Add(c);
+                    // last chunk to exact EOF (closed range)
+                    clips.Add(new Clip
+                    {
+                        Index = idx++,
+                        From = pos,
+                        To = fileSize - 1
+                    });
                     break;
                 }
             }
+
             return clips;
         }
     }

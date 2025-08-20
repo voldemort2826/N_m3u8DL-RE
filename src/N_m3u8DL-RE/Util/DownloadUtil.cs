@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 
 using N_m3u8DL_RE.Common.Log;
@@ -132,6 +133,22 @@ namespace N_m3u8DL_RE.Util
             try
             {
                 using HttpResponseMessage response = await AppHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationTokenSource.Token);
+
+                // Ignore single-byte off-by-one at EOF that returns 403
+                if (response.StatusCode == HttpStatusCode.Forbidden && request.Headers.Range != null)
+                {
+                    RangeItemHeaderValue? r = request.Headers.Range.Ranges.FirstOrDefault();
+                    if (r != null && r.From.HasValue && r.To.HasValue && r.From.Value == r.To.Value)
+                    {
+                        await File.WriteAllBytesAsync(path, [], cancellationTokenSource.Token);
+                        return new DownloadResult()
+                        {
+                            ActualContentLength = 0,
+                            RespContentLength = 0,
+                            ActualFilePath = path,
+                        };
+                    }
+                }
 
                 // Handle redirects (this logic could be moved to HTTPUtil.DoGetAsync)
                 if (((int)response.StatusCode).ToString(CultureInfo.InvariantCulture).StartsWith("30", StringComparison.OrdinalIgnoreCase))

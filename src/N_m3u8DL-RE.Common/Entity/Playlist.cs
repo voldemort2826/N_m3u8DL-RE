@@ -23,6 +23,11 @@
         public double? TargetDuration { get; set; }
         // INIT information
         public MediaSegment? MediaInit { get; set; }
+
+        // DASH SegmentBase index range (absolute byte positions, inclusive)
+        public long? IndexRangeStart { get; set; }
+        public long? IndexRangeEnd { get; set; }
+
         // Segment information
         public List<MediaPart> MediaParts { get; set; } = [];
     }

@@ -95,7 +95,7 @@ namespace N_m3u8DL_RE.DownloadManager
             // Try to slice and download in parallel for single segment
             if (segments.Count() == 1)
             {
-                List<MediaSegment>? splitSegments = await LargeSingleFileSplitUtil.SplitUrlAsync(segments.First(), DownloaderConfig.Headers);
+                List<MediaSegment>? splitSegments = await LargeSingleFileSplitUtil.SplitUrlAsync(segments.First(), streamSpec.Playlist, DownloaderConfig.Headers);
                 if (splitSegments != null)
                 {
                     segments = splitSegments;
@@ -367,7 +367,7 @@ namespace N_m3u8DL_RE.DownloadManager
             // Check the number of segments
             if (DownloaderConfig.MyOptions.CheckSegmentsCount && FileDic.Values.Any(s => s == null))
             {
-                Logger.ErrorMarkUp(ResString.SegmentCountCheckNotPass, totalCount, FileDic.Values.Count(s => s != null));
+                Logger.ErrorMarkUp(ResString.SegmentCountCheckNotPass, FileDic.Count, FileDic.Values.Count(s => s != null));
                 return false;
             }
 
