@@ -612,7 +612,20 @@ namespace N_m3u8DL_RE.DownloadManager
                     // ffmpeg merge
                     string[] files = [.. FileDic.OrderBy(s => s.Key.Index).Select(s => s.Value).Select(v => v!.ActualFilePath)];
                     Logger.InfoMarkUp(ResString.FfmpegMerge);
-                    string ext = streamSpec.MediaType == MediaType.AUDIO ? "m4a" : "mp4";
+
+                    // Select output extension based on codec
+                    string ext;
+                    if (streamSpec.MediaType == MediaType.AUDIO)
+                    {
+                        bool isMp3 = mediaInfos.Where(m => m.Type == "Audio")
+                            .Any(m => (m.BaseInfo ?? "").Contains("mp3", StringComparison.OrdinalIgnoreCase));
+                        ext = isMp3 ? "mp3" : "m4a";
+                    }
+                    else
+                    {
+                        ext = "mp4";
+                    }
+
                     string ffOut = Path.Combine(Path.GetDirectoryName(output)!, Path.GetFileNameWithoutExtension(output) + $".{ext}");
                     // Check if the target file exists
                     while (File.Exists(ffOut))

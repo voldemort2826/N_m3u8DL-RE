@@ -186,6 +186,9 @@ namespace N_m3u8DL_RE.Util
                 case "AC3":
                     _ = command.Append("\" -map 0:a -c copy -y \"" + outputPath + ".ac3\"");
                     break;
+                case "MP3":
+                    _ = command.Append("\" -map 0:a -c copy -y \"" + outputPath + ".mp3\"");
+                    break;
                 default:
                     break;
             }
